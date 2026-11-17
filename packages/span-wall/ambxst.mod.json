@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "eliasld.span-wall",
   "name": "Span wall",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Adds a Span layout mode to the Wallpapers tab: one wallpaper stretched over the whole virtual desktop, each screen showing its slice, instead of per-screen crops. A layout dropdown sits right of the content filters. Per-screen wallpaper pins are kept and restored when you switch back.",
   "license": "MIT",
   "author": "EliasLd",

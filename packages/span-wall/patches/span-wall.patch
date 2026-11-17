@@ -1,3 +1,74 @@
+diff --git a/modules/components/TintedWallpaper.qml b/modules/components/TintedWallpaper.qml
+index 9419459..0022bcc 100644
+--- a/modules/components/TintedWallpaper.qml
++++ b/modules/components/TintedWallpaper.qml
+@@ -1,6 +1,7 @@
+ import QtQuick
+ import QtMultimedia
+ import QtQuick.Effects
++import qs.modules.services
+ import qs.modules.theme
+ import qs.config
+ 
+@@ -9,6 +10,10 @@ Item {
+     property string source: ""
+     property real radius: 0
+     property bool tintEnabled: false
++    // Opt-in: set to a ShellScreen to have static images span the whole
++    // virtual desktop. Overview and previews leave it unset and stay stock.
++    property var spanScreen: null
++    readonly property bool spanActive: spanScreen !== null && SpanWall.spanActive
+ 
+     readonly property bool isVideo: {
+         var ext = source.toString().toLowerCase().split('?')[0].split('.').pop();
+@@ -173,12 +178,19 @@ Item {
+         Image {
+             mipmap: true
+             id: rawImage
+-            anchors.fill: parent
++            // Span: the item is the whole virtual desktop, positioned so the
++            // window's slice lines up with the layout. Stock: window-filling.
++            x: root.spanActive ? SpanWall.virtualRect.x - root.spanScreen.x : 0
++            y: root.spanActive ? SpanWall.virtualRect.y - root.spanScreen.y : 0
++            width: root.spanActive ? SpanWall.virtualRect.width : parent.width
++            height: root.spanActive ? SpanWall.virtualRect.height : parent.height
+             visible: !root.isVideo
+             source: root.isVideo ? "" : root.source
+             fillMode: Image.PreserveAspectCrop
+             asynchronous: true
+             smooth: true
++            sourceSize.width: root.spanActive ? SpanWall.virtualRect.width : 0
++            sourceSize.height: root.spanActive ? SpanWall.virtualRect.height : 0
+ 
+             // Tint layer
+             layer.enabled: root.tintEnabled
+diff --git a/modules/lockscreen/LockScreen.qml b/modules/lockscreen/LockScreen.qml
+index c8ffe5d..dbf2fac 100644
+--- a/modules/lockscreen/LockScreen.qml
++++ b/modules/lockscreen/LockScreen.qml
+@@ -11,6 +11,7 @@ import qs.modules.components
+ import qs.modules.corners
+ import qs.modules.theme
+ import qs.modules.globals
++import qs.modules.services
+ import qs.modules.widgets.dashboard.widgets
+ import qs.config
+ 
+@@ -33,9 +34,14 @@ WlSessionLockSurface {
+         z: 1
+         radius: 0
+         tintEnabled: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.tintEnabled : false
++        spanScreen: root.screen
+ 
+         property string wallpaperPath: {
+             var wp = root.screen ? GlobalStates.wallpaperForScreen(root.screen.name) : GlobalStates.wallpaperManager;
++            // Span: one wallpaper everywhere; pins are kept but ignored,
++            // same as the desktop wallpaper window.
++            if (wp && SpanWall.spanActive)
++                return wp.currentWallpaper;
+             return wp ? wp.effectiveWallpaper : "";
+         }
+ 
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 index e830322..5ddd530 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
