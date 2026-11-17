@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- The lockscreen follows the layout mode: under Span its static wallpaper is
+  continuous across screens. Lockscreen videos and GIFs keep playing per
+  screen.
+
 ## 0.1.1
 
 - Initial release: a layout dropdown in the Wallpapers tab with two modes,

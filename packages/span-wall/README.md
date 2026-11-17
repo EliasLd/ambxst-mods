@@ -17,6 +17,9 @@ content filter row, modelled after the scheme selector on the same tab.
   ignored but never deleted — switching back to Per Screen restores them.
 - Span applies to static images. Videos and GIFs keep Ambxst's per-screen
   rendering.
+- The lockscreen follows the layout mode: under Span its static wallpaper is
+  continuous across screens. Lockscreen videos and GIFs keep playing per
+  screen.
 - The mode is stored in the mod's settings (Settings → Mods → Span wall) and
   the dropdown there stays in sync with the one in the Wallpapers tab.
 - With only one monitor the dropdown hides itself and the mode is inert.
@@ -41,5 +44,5 @@ Then restart Ambxst.
 ## Compatibility
 
 Base Ambxst 1.3.15 (commit 5d71e924212ce2c0203e7448e0b1e3db52608640). The
-mod patches wallpaper file geometry and the Wallpapers tab; see
-`patches/span-wall.patch`.
+mod patches wallpaper geometry on the desktop and the lockscreen, plus the
+Wallpapers tab; see `patches/span-wall.patch`.
