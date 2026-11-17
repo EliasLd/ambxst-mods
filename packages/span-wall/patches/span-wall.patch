@@ -36,3 +36,58 @@ index e830322..5ddd530 100644
                      layer.enabled: parent.tint
                      layer.effect: ShaderEffect {
                          property var paletteTexture: paletteTextureSource
+diff --git a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
+index 195fd45..97865f5 100644
+--- a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
++++ b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
+@@ -84,6 +84,17 @@ FocusScope {
+             focusFunc: function () {
+                 wallpapersFilterBar.focusFilters();
+             }
++        },
++        {
++            id: "modeSelector",
++            focusFunc: function () {
++                // A hidden selector can't take focus; cycle on to the search.
++                if (!wallpaperModeSelector.visible) {
++                    wallpapersTabRoot.focusNextElement();
++                    return;
++                }
++                wallpaperModeSelector.openAndFocus();
++            }
+         }
+     ]
+ 
+@@ -807,6 +818,9 @@ FocusScope {
+         Item {
+             Layout.fillWidth: true
+             Layout.preferredHeight: wallpapersFilterBar.height
++            // Keep this row above the grid so the mode selector's expanded
++            // list paints over it.
++            z: 1000
+ 
+             FilterBar {
+                 id: wallpapersFilterBar
+@@ -830,6 +844,22 @@ FocusScope {
+                     wallpapersTabRoot.focusPreviousElement();
+                 }
+             }
++
++            // Layout mode at the extreme right of the filter row; same
++            // inline-expander pattern as the scheme selector above.
++            ModeSelector {
++                id: wallpaperModeSelector
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++
++                onModeSelectorClosed: wallpapersTabRoot.focusSearch();
++
++                onEscapePressedOnMode: wallpapersTabRoot.focusSearch();
++
++                onTabPressed: wallpapersTabRoot.focusNextElement();
++
++                onShiftTabPressed: wallpapersTabRoot.focusPreviousElement();
++            }
+         }
+ 
+         // Grid de wallpapers
