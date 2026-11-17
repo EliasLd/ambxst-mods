@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/settings.schema.json",
+  "version": 1,
+  "fields": [
+    {
+      "key": "mode",
+      "label": "Wallpaper layout",
+      "description": "Per Screen: each screen gets the wallpaper cropped to it (Ambxst default). Span: one image covered across the whole desktop; every screen shows its slice.",
+      "type": "enum",
+      "default": "per-screen",
+      "options": [
+        { "label": "Per Screen", "value": "per-screen" },
+        { "label": "Span", "value": "span" }
+      ],
+      "restartRequired": false
+    }
+  ]
+}
