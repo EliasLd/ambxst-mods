@@ -20,7 +20,7 @@ content filter row, modelled after the scheme selector on the same tab.
 - The lockscreen follows the layout mode: under Span its static wallpaper is
   continuous across screens. Lockscreen videos and GIFs keep playing per
   screen.
-- The mode is stored in the mod's settings (Settings → Mods → Span wall) and
+- The mode is stored in the mod's settings (Settings -> Mods -> Span wall) and
   the dropdown there stays in sync with the one in the Wallpapers tab.
 - With only one monitor the dropdown hides itself and the mode is inert.
 - The dropdown is intentionally Wallpapers-tab only; nothing else changes.
@@ -31,15 +31,14 @@ Span has no visible effect while it is active. Disable such a mod to use Span.
 
 ## Install
 
-From the repository root:
+Installable straight from its GitHub URL, either with the mod manager CLI:
 
 ```sh
-ambxst mods install ./packages/span-wall
-ambxst mods enable eliasld.span-wall
-ambxst mods rebuild
+ambxst mods install https://github.com/EliasLd/ambxst-mods/tree/main/packages/span-wall
 ```
 
-Then restart Ambxst.
+or from the GUI (Settings -> Mods) by pasting the same URL, then enable the
+mod and rebuild. Restart Ambxst afterwards.
 
 ## Compatibility
 
