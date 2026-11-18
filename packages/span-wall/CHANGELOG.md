@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Compatibility with Ambxst 1.4.1: the sources the mod composes against are
+  unchanged between 1.3.15 and 1.4.1, so no code change was needed.
+
 ## 0.2.0
 
 - The lockscreen follows the layout mode: under Span its static wallpaper is

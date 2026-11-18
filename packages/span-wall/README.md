@@ -42,6 +42,7 @@ mod and rebuild. Restart Ambxst afterwards.
 
 ## Compatibility
 
-Base Ambxst 1.3.15 (commit 5d71e924212ce2c0203e7448e0b1e3db52608640). The
-mod patches wallpaper geometry on the desktop and the lockscreen, plus the
-Wallpapers tab; see `patches/span-wall.patch`.
+Tested against Ambxst 1.3.15 (commit 5d71e924212ce2c0203e7448e0b1e3db52608640)
+and 1.4.1 (commit 5db90ba000713b5cb991a2abce1b766ab47fbd2b): the wallpaper,
+lockscreen and Wallpapers tab sources the mod patches are identical between
+these versions, so one build serves both; see `patches/span-wall.patch`.
