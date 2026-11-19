@@ -12,7 +12,7 @@
  */
 
 import definePlugin, { PluginNative } from "@utils/types";
-import { onceReady } from "@webpack";
+import { findByPropsLazy, findStoreLazy, onceReady } from "@webpack";
 import {
     ChannelStore,
     GuildMemberStore,
@@ -111,13 +111,60 @@ const nativeTransport: Transport | null = Native
 
 const transport: Transport = nativeTransport ?? stubTransport;
 
+// --- Discord internal modules ------------------------------------------------
+//
+// Resolved the same way Vencord plugins do, all named props verified against
+// the current voice bundle:
+// - voiceSettings: the module whose functions the voice UI itself calls
+//   (setSelfMute / setLocalVolume / toggleSelfMute / toggleSelfDeaf live
+//   together on its default export, hence the nested-export props find).
+// - channelActions: selectVoiceChannel + selectChannel (userVoiceShow
+//   precedent); selectVoiceChannel(null) is Discord's own disconnect flow.
+// - SpeakingStore: displayName-located FluxStore backing the speaking rings.
+
+interface VoiceSettingsActions {
+    setLocalVolume(userId: string, volume: number): void;
+    toggleSelfMute(options?: Record<string, unknown>): void;
+    toggleSelfDeaf(options?: Record<string, unknown>): void;
+}
+
+interface ChannelActions {
+    selectVoiceChannel(channelId: string | null, ...args: unknown[]): void;
+}
+
+interface SpeakingStoreLike {
+    getSpeakers(): string[];
+    addChangeListener(callback: () => void): void;
+    removeChangeListener(callback: () => void): void;
+}
+
+// The actions object hides behind a default export, so props matching must
+// go through the nested-export scan (findByProps does this by default).
+const voiceSettingsActions = findByPropsLazy(
+    "setSelfMute",
+    "setLocalVolume",
+    "toggleSelfMute",
+    "toggleSelfDeaf"
+) as unknown as VoiceSettingsActions | undefined;
+
+const channelActions = findByPropsLazy(
+    "selectVoiceChannel",
+    "selectChannel"
+) as unknown as ChannelActions | undefined;
+
+const speakingStore = findStoreLazy("SpeakingStore") as unknown as SpeakingStoreLike | undefined;
+
 // --- Speaking coalescing ----------------------------------------------------
 //
-// Keep only the latest transition per user and flush one batch every SPEAK:
-// a user flapping mute-and-talk still produces at most one line per flush.
+// Diff the SpeakingStore's current speakers against the previous set on its
+// change events (the same subscription the voice UI's speaking rings use),
+// then keep only the latest transition per user and flush one batch per
+// SPEAKING_FLUSH_MS. No flux event names involved, so renames upstream
+// cannot break it.
 
 const speakingQueue = new Map<string, boolean>();
 let speakingTimer: ReturnType<typeof setTimeout> | undefined;
+let knownSpeakers: Set<string> | null = null;
 
 function queueSpeaking(userId: string, on: boolean) {
     if (!userId)
@@ -129,13 +176,29 @@ function queueSpeaking(userId: string, on: boolean) {
 
 function flushSpeaking() {
     speakingTimer = undefined;
-    if (speakingQueue.size === 0)
+    if (speakingQueue.size === 0 || ready === false)
         return;
 
     const lines = Array.from(speakingQueue, ([userId, on]) =>
         JSON.stringify({ t: "speaking", userId, on }));
     speakingQueue.clear();
     transport.sendSpeakingBatch(lines);
+}
+
+function diffSpeaking() {
+    if (!ready || !speakingStore?.getSpeakers)
+        return;
+
+    const current = new Set(speakingStore.getSpeakers());
+    if (knownSpeakers) {
+        for (const userId of current)
+            if (!knownSpeakers.has(userId))
+                queueSpeaking(userId, true);
+        for (const userId of knownSpeakers)
+            if (!current.has(userId))
+                queueSpeaking(userId, false);
+    }
+    knownSpeakers = current;
 }
 
 // --- Serialization ----------------------------------------------------------
@@ -303,7 +366,85 @@ interface BridgeCommand {
     t?: string;
     id?: number;
     op?: string;
+    userId?: string;
+    value?: number;
+    kind?: string;
     [key: string]: unknown;
+}
+
+// Discord's global keybind action entries, delivered on
+// KEYBINDS_REGISTER_GLOBAL_KEYBIND_ACTIONS (same surface Vesktop's keybinds
+// run on). onTrigger gets the press phase plus the keybind descriptor, like
+// Vesktop's keybindHandler does.
+interface DiscordKeybindEntry {
+    onTrigger(pressed: boolean, keybind: { action: string; shortcut: unknown[]; params: object }): void;
+    keyEvents?: { keydown?: boolean; keyup?: boolean };
+}
+
+let keybindActions: Record<string, DiscordKeybindEntry> | null = null;
+
+// Camera has no direct action module; it rides the keybind registry entry
+// (the same action id Vesktop's keybinds map toggleCamera to, proven in
+// upstream #1238).
+const OP_TO_KEYBIND_ACTION = {
+    camera: "TOGGLE_CAMERA"
+} as const;
+
+// Runs a Discord keybind action press-and-release style and lets Discord's
+// own keyEvents decide which phase does the work (toggles fire on release,
+// push to talk on both).
+function triggerKeybindAction(actionId: string): boolean {
+    const entry = keybindActions?.[actionId];
+    if (!entry?.onTrigger)
+        return false;
+    const keybind = { action: actionId, shortcut: [] as unknown[], params: {} };
+    if (entry.keyEvents?.keydown)
+        entry.onTrigger(true, keybind);
+    if (entry.keyEvents?.keyup)
+        entry.onTrigger(false, keybind);
+    return true;
+}
+
+// Returns null on success, an error message otherwise (passed to ack).
+async function executeCommand(cmd: BridgeCommand): Promise<string | null> {
+    switch (cmd.op) {
+        case "volume.set": {
+            if (typeof cmd.userId !== "string" || !cmd.userId
+                || typeof cmd.value !== "number" || !Number.isFinite(cmd.value))
+                return "volume.set needs userId and a numeric value";
+            // The mod clamps too; clamp again so nothing can write nonsense.
+            const value = Math.max(0, Math.min(200, Math.round(cmd.value)));
+            voiceSettingsActions?.setLocalVolume(cmd.userId, value);
+            return voiceSettingsActions ? null : "voice actions module not found";
+        }
+        case "self.toggle": {
+            if (cmd.kind !== "mute" && cmd.kind !== "deafen")
+                return `self.toggle kind must be mute or deafen, got: ${String(cmd.kind ?? "(none)")}`;
+            if (!voiceSettingsActions?.toggleSelfMute)
+                return "voice actions module not found";
+            // The exact function the voice UI's own buttons run.
+            if (cmd.kind === "mute")
+                voiceSettingsActions.toggleSelfMute();
+            else
+                voiceSettingsActions.toggleSelfDeaf();
+            return null;
+        }
+        case "camera.toggle":
+            return triggerKeybindAction(OP_TO_KEYBIND_ACTION.camera)
+                ? null
+                : "Discord has not registered its keybind actions yet";
+        case "voice.leave":
+            // null is exactly what Discord's own disconnect flow passes.
+            if (!channelActions?.selectVoiceChannel)
+                return "channel actions module not found";
+            channelActions.selectVoiceChannel(null);
+            return null;
+        case "state.get":
+            pushState();
+            return null;
+        default:
+            return `unknown op: ${String(cmd.op ?? "(none)")}`;
+    }
 }
 
 async function handleCommandLine(line: string) {
@@ -318,9 +459,8 @@ async function handleCommandLine(line: string) {
     if (cmd.t !== "cmd" || typeof cmd.id !== "number")
         return;
 
-    // M4 dispatches volume.set / self.toggle / camera.toggle / voice.leave /
-    // state.get here.
-    await Native.ack(cmd.id, false, `op ${String(cmd.op)} not implemented yet`);
+    const failure = await executeCommand(cmd);
+    await Native.ack(cmd.id, failure === null, failure ?? "");
 }
 
 export default definePlugin({
@@ -339,13 +479,16 @@ export default definePlugin({
         AUDIO_TOGGLE_SELF_MUTE: () => pushState(),
         AUDIO_TOGGLE_SELF_DEAF: () => pushState(),
 
-        // Who is talking. SPEAKING / STOP_SPEAKING are the names the current
-        // client dispatches (discord-types); the AUDIO_START/STOP pair is a
-        // legacy fallback kept so a future rebuild cannot go silent.
-        SPEAKING: (event: { userId?: string }) => queueSpeaking(event.userId ?? "", true),
-        STOP_SPEAKING: (event: { userId?: string }) => queueSpeaking(event.userId ?? "", false),
-        AUDIO_START_SPEAKING: (event: { userId?: string }) => queueSpeaking(event.userId ?? "", true),
-        AUDIO_STOP_SPEAKING: (event: { userId?: string }) => queueSpeaking(event.userId ?? "", false)
+        // Who is talking comes from the SpeakingStore diff (see its section);
+        // the old AUDIO_START/STOP_SPEAKING dispatches no longer exist in the
+        // current client, so there is deliberately no flux speaking entry.
+
+        // Discord hands out its global keybind actions here (the same surface
+        // Vesktop's own keybinds run on); captured for the camera toggle,
+        // which has no direct actions module.
+        KEYBINDS_REGISTER_GLOBAL_KEYBIND_ACTIONS: (event: { keybinds?: Record<string, DiscordKeybindEntry> }) => {
+            keybindActions = event.keybinds ?? null;
+        }
     },
 
     async start() {
@@ -353,6 +496,18 @@ export default definePlugin({
         // reads are only meaningful once the client finished loading.
         await onceReady;
         ready = true;
+
+        // Per-user local volume lives here, outside the voice states, so its
+        // own change listener keeps the tab's sliders truthful - including
+        // edits made on Discord's own user volume slider.
+        MediaEngineStore.addChangeListener(pushState);
+
+        // Speaking truth: subscribe to the store the voice UI uses, and seed
+        // the diff baseline with whoever is already speaking.
+        if (speakingStore?.addChangeListener) {
+            speakingStore.addChangeListener(diffSpeaking);
+            knownSpeakers = new Set(speakingStore.getSpeakers?.() ?? []);
+        }
 
         if (Native) {
             startSessionPolling();
@@ -374,6 +529,9 @@ export default definePlugin({
     stop() {
         ready = false;
         commandsRunning = false;
+        MediaEngineStore.removeChangeListener(pushState);
+        speakingStore?.removeChangeListener?.(diffSpeaking);
+        knownSpeakers = null;
         if (sessionPollTimer !== undefined) {
             clearInterval(sessionPollTimer);
             sessionPollTimer = undefined;
