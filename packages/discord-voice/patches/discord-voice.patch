@@ -1,0 +1,87 @@
+diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShortcuts.qml
+index 894ec7b..0b4628e 100644
+--- a/modules/services/GlobalShortcuts.qml
++++ b/modules/services/GlobalShortcuts.qml
+@@ -51,6 +51,8 @@ QtObject {
+             case "dashboard-widgets": toggleDashboardTab(0); break;
+             case "dashboard-wallpapers": toggleDashboardTab(1); break;
+             case "dashboard-kanban": toggleDashboardTab(2); break;
++            case "discord": toggleDashboardTab(3); break;
++            case "dashboard-discord": toggleDashboardTab(3); break;
+             case "dashboard-assistant": toggleAssistant(); break;
+             case "dashboard-controls": toggleSettings(); break;
+ 
+diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
+index cbe463b..31653b2 100644
+--- a/modules/theme/Icons.qml
++++ b/modules/theme/Icons.qml
+@@ -42,6 +42,7 @@ QtObject {
+     // Dashboard
+     readonly property string widgets: ""
+     readonly property string kanban: ""
++    readonly property string discord: "\uE61A"
+     readonly property string wallpapers: ""
+     readonly property string assistant: ""
+     readonly property string apps: ""
+diff --git a/modules/widgets/dashboard/Dashboard.qml b/modules/widgets/dashboard/Dashboard.qml
+index 6b60935..9b32d75 100644
+--- a/modules/widgets/dashboard/Dashboard.qml
++++ b/modules/widgets/dashboard/Dashboard.qml
+@@ -10,6 +10,7 @@ import qs.modules.notch
+ import qs.modules.widgets.dashboard.widgets
+ import qs.modules.widgets.dashboard.controls
+ import qs.modules.widgets.dashboard.wallpapers
++import qs.modules.widgets.dashboard.discord
+ import qs.modules.widgets.dashboard.metrics
+ import qs.config
+ 
+@@ -23,7 +24,7 @@ NotchAnimationBehavior {
+         property int currentTab: GlobalStates.dashboardCurrentTab
+     }
+ 
+-    readonly property var tabModel: [Icons.widgets, Icons.wallpapers, Icons.heartbeat]
++    readonly property var tabModel: [Icons.widgets, Icons.wallpapers, Icons.heartbeat, Icons.discord]
+     readonly property int tabCount: tabModel.length
+     readonly property int tabSpacing: 8
+ 
+@@ -200,7 +201,7 @@ NotchAnimationBehavior {
+ 
+                 // Calcular posición Y para un índice dado
+                 function getYForIndex(idx) {
+-                    if (idx <= 2) {
++                    if (idx < root.tabCount) {
+                         return idx * (width + root.tabSpacing);
+                     } else {
+                         // Controls button at the bottom
+@@ -461,6 +462,13 @@ NotchAnimationBehavior {
+                     sourceComponent: metricsComponent
+                     z: visible ? 1 : 0
+                 }
++
++                // Tab 3: Discord voice
++                TabLoader {
++                    property int index: 3
++                    sourceComponent: discordComponent
++                    z: visible ? 1 : 0
++                }
+                 
+                 // Helper to access current item for focus
+                 property var currentItem: {
+@@ -468,6 +476,7 @@ NotchAnimationBehavior {
+                         case 0: return children[0].item;
+                         case 1: return children[1].item;
+                         case 2: return children[2].item;
++                        case 3: return children[3].item;
+                         default: return null;
+                     }
+                 }
+@@ -593,4 +602,9 @@ NotchAnimationBehavior {
+         id: wallpapersComponent
+         WallpapersTab {}
+     }
++
++    Component {
++        id: discordComponent
++        DiscordTab {}
++    }
+ }
