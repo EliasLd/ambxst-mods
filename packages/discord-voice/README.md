@@ -93,6 +93,19 @@ bind = $mainMod, V, exec, ambxst run discord
 The keybind accepts both `ambxst run discord` and
 `ambxst run dashboard-discord`.
 
+Two more commands exist for global mute keys, so you never have to focus
+the Discord window:
+
+```sh
+bind = $mainMod, M, exec, ambxst run discord-mute
+bind = $mainMod, N, exec, ambxst run discord-deafen
+```
+
+`discord-mute` toggles your microphone, `discord-deafen` toggles Discord's
+deafen (mutes all incoming audio). Both are plain toggles, work like
+Discord's own global mute actions, and do nothing quietly while Vesktop is
+closed. Pick your own key combos - the ones above are examples.
+
 ## Update, uninstall, recovery
 
 - **Update:** re-run the same one-liner. It replaces the plugin files and is
