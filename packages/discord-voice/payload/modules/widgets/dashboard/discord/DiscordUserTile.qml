@@ -4,6 +4,7 @@ import QtQuick
 import qs.modules.theme
 import qs.modules.components
 import qs.modules.services
+import qs.modules.widgets.dashboard.widgets
 import qs.config
 
 // One voice-channel participant as a grid tile: avatar with the speaking
@@ -165,8 +166,8 @@ Rectangle {
             }
         }
 
-        // --- Per-user local volume (never for self: the bar would imply a
-        //     local audio path that does not exist) ---
+        // --- Per-user local volume and mute (never for self: the bar would
+        //     imply a local audio path that does not exist) ---
         Row {
             visible: tile.hasVolume && !tile.isSelf
             width: parent.width
@@ -176,7 +177,7 @@ Rectangle {
             StyledSlider {
                 id: volumeSlider
 
-                width: parent.width
+                width: parent.width - muteButton.width - parent.spacing
                 height: parent.height
                 resizeParent: false
                 tooltipText: Math.round(value * 100) + "%"
@@ -202,6 +203,23 @@ Rectangle {
                         duration: Config.animDuration / 2
                     }
                 }
+            }
+
+            // Local mute: stop hearing this participant (their audio for
+            // you, never their mic). Same ControlButton language as the
+            // bottom-left dock, at the bar's height; the glyph mirrors that
+            // dock's mute pair per the owner's preference, while the action
+            // stays this user's local mute. The bar dims while muted.
+            ControlButton {
+                id: muteButton
+
+                width: 26
+                height: 26
+                anchors.verticalCenter: parent.verticalCenter
+                isActive: tile.localMute
+                iconName: tile.localMute ? Icons.micSlash : Icons.mic
+                tooltipText: isActive ? "Unmute locally" : "Mute locally"
+                onClicked: DiscordVoice.setUserLocalMute(tile.userId, !tile.localMute)
             }
         }
     }

@@ -12,10 +12,10 @@ import qs.modules.services
 // One unix socket, newline-delimited UTF-8 JSON: the AmbxstDiscord
 // userplugin inside Vesktop connects to the bridge and pushes messages
 // ("hello", "state", "speaking", "ack"); the mod answers with commands
-// ("cmd volume.set" / "self.toggle" / "camera.toggle" / "voice.leave" /
-// "state.get"). Everything executes inside the plugin against Discord's own
-// stores and actions: released Vesktop (1.6.x) has no unix control plane a
-// shell could write to, so there is no second socket.
+// ("cmd volume.set" / "volume.localMute" / "self.toggle" / "camera.toggle" /
+// "voice.leave" / "state.get"). Everything executes inside the plugin
+// against Discord's own stores and actions: released Vesktop (1.6.x) has no
+// unix control plane a shell could write to, so there is no second socket.
 Singleton {
     id: root
 
@@ -201,6 +201,15 @@ Singleton {
         return root.sendCommand("volume.set", {
             userId: String(userId),
             value: Math.max(0, Math.min(200, Math.round(value)))
+        });
+    }
+
+    // Per-user local mute (their audio for you, not their mic), executed by
+    // the plugin.
+    function setUserLocalMute(userId, mute) {
+        return root.sendCommand("volume.localMute", {
+            userId: String(userId),
+            value: mute === true
         });
     }
 
