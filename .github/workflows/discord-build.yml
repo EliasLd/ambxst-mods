@@ -16,6 +16,9 @@ on:
   push:
     paths:
       - "packages/discord-voice/vesktop-plugin/**"
+      # Also rebuild when the pipeline itself changes, or a CI fix never
+      # gets exercised.
+      - ".github/workflows/discord-build.yml"
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
