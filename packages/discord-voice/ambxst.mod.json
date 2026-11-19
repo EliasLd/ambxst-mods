@@ -41,8 +41,8 @@
     },
     {
       "type": "overlay",
-      "source": "payload/modules/widgets/dashboard/discord/DiscordUserRow.qml",
-      "target": "modules/widgets/dashboard/discord/DiscordUserRow.qml"
+      "source": "payload/modules/widgets/dashboard/discord/DiscordUserTile.qml",
+      "target": "modules/widgets/dashboard/discord/DiscordUserTile.qml"
     },
     {
       "type": "patch",

@@ -1,22 +1,22 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Layouts
-import Quickshell
 import qs.modules.theme
 import qs.modules.components
 import qs.modules.services
 import qs.config
 
-// One voice-channel participant: avatar with a speaking glow ring, display
-// name, mic/deafen/local-mute indicators and the per-user local volume
-// slider. The volume value lives with Discord; the row is just a remote
-// control, so nothing is persisted here.
+// One voice-channel participant as a grid tile: avatar with the speaking
+// ring and a mic / deafen badge, the display name right above the volume
+// bar, and the bar itself. The volume value lives with Discord; the tile is
+// just a remote control, so nothing is persisted here.
 Rectangle {
-    id: userRow
+    id: tile
 
     color: "transparent"
-    height: 56
+    // Uniform grid cells: the tab sizes the width from its column count,
+    // the tile owns the fixed height.
+    implicitHeight: 104
 
     property var user: null
 
@@ -27,10 +27,10 @@ Rectangle {
     readonly property bool suppressed: user ? user.suppressed === true : false
     readonly property bool localMute: user ? user.localMute === true : false
     // Self has no local audio context (you do not "hear" yourself through a
-    // local volume), so the volume bar is only for other participants.
+    // local volume), so the bar only exists for other participants.
     readonly property bool isSelf: user ? user.self === true : false
     // The plugin reports volume as null when the internal volume module is
-    // unavailable; the slider hides instead of pretending.
+    // unavailable; the bar hides instead of pretending.
     readonly property bool hasVolume: user ? typeof user.volume === "number" : false
     readonly property real volumeValue: hasVolume ? user.volume : 100
     readonly property bool speaking: DiscordVoice.speaking[user ? String(user.id) : ""] === true
@@ -44,19 +44,21 @@ Rectangle {
 
     function syncVolume() {
         syncing = true;
-        volumeSlider.value = volumeValue / 200;
+        // Track is 1:1 percent (0-100), like Vesktop's own popout slider;
+        // values Discord stored above 100 pin the fill at the end.
+        volumeSlider.value = Math.min(volumeValue / 100, 1);
         syncing = false;
     }
 
-    Row {
+    Column {
         anchors.fill: parent
-        spacing: 10
+        spacing: 2
 
-        // --- Avatar with speaking glow ring ---
+        // --- Avatar with the speaking glow ring and the state badge ---
         Item {
-            width: 44
-            height: 44
-            anchors.verticalCenter: parent.verticalCenter
+            width: 52
+            height: 52
+            anchors.horizontalCenter: parent.horizontalCenter
 
             Rectangle {
                 id: glowRing
@@ -64,12 +66,14 @@ Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: "transparent"
-                border.width: 2
+                // A 3px ring: anything thinner disappears next to an avatar
+                // this size.
+                border.width: 3
                 border.color: Styling.srItem("primary")
                 opacity: 0
 
                 SequentialAnimation on opacity {
-                    running: DiscordVoice.speakingGlow && userRow.speaking
+                    running: DiscordVoice.speakingGlow && tile.speaking
                     alwaysRunToEnd: true
 
                     NumberAnimation {
@@ -92,7 +96,7 @@ Rectangle {
                 id: avatarBox
 
                 anchors.fill: glowRing
-                anchors.margins: 2
+                anchors.margins: 3
                 radius: width / 2
                 variant: "pane"
 
@@ -101,8 +105,8 @@ Rectangle {
 
                     anchors.fill: parent
                     anchors.margins: 2
-                    visible: userRow.user && userRow.user.avatarUrl !== ""
-                    source: visible ? userRow.user.avatarUrl : ""
+                    visible: tile.user && tile.user.avatarUrl !== ""
+                    source: visible ? tile.user.avatarUrl : ""
                     mipmap: true
                     asynchronous: true
                     fillMode: Image.PreserveAspectCrop
@@ -117,19 +121,41 @@ Rectangle {
                     font.pixelSize: 18
                 }
             }
+
+            // Discord-style corner badge for their own mute / deafen state
+            // (deafen wins: a deafened user is muted too). Local mute is not
+            // badge material - the volume bar carries it.
+            StyledRect {
+                visible: tile.deafened || tile.muted || tile.suppressed
+                width: 16
+                height: 16
+                radius: 8
+                anchors.right: parent.right
+                anchors.rightMargin: -2
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: -2
+                variant: "pane"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: tile.deafened ? Icons.speakerX : Icons.micSlash
+                    color: Colors.overError
+                    font.family: Icons.font
+                    font.pixelSize: 10
+                }
+            }
         }
 
-        // --- Name ---
+        // --- Name, directly above the bar ---
         Text {
-            text: userRow.userName
-            color: userRow.speaking ? Styling.srItem("primary") : Colors.overBackground
+            width: parent.width
+            text: tile.userName
+            color: tile.speaking ? Styling.srItem("primary") : Colors.overBackground
             font.family: Config.theme.font
-            font.pixelSize: 15
-            font.weight: userRow.speaking ? Font.Medium : Font.Normal
+            font.pixelSize: 11
+            font.weight: tile.speaking ? Font.Medium : Font.Normal
             elide: Text.ElideRight
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 44 - 10 - statusIcons.width - 10 - volumeArea.width - 10
-            verticalAlignment: Text.AlignVCenter
+            horizontalAlignment: Text.AlignHCenter
 
             Behavior on color {
                 enabled: Config.animDuration > 0
@@ -139,69 +165,35 @@ Rectangle {
             }
         }
 
-        // --- Mic / hearing indicators ---
-        Row {
-            id: statusIcons
-
-            spacing: 6
-            anchors.verticalCenter: parent.verticalCenter
-
-            Text {
-                visible: userRow.muted || userRow.suppressed
-                text: Icons.micSlash
-                color: Colors.overError
-                font.family: Icons.font
-                font.pixelSize: 14
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                visible: userRow.deafened
-                text: Icons.speakerX
-                color: Colors.overError
-                font.family: Icons.font
-                font.pixelSize: 14
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                visible: userRow.localMute && !userRow.deafened
-                text: Icons.speakerSlash
-                color: Colors.overSurfaceVariant
-                font.family: Icons.font
-                font.pixelSize: 14
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-
         // --- Per-user local volume (never for self: the bar would imply a
         //     local audio path that does not exist) ---
-        Item {
-            id: volumeArea
-
-            visible: userRow.hasVolume && !userRow.isSelf
-            width: visible ? 120 : 0
-            height: 34
-            anchors.verticalCenter: parent.verticalCenter
+        Row {
+            visible: tile.hasVolume && !tile.isSelf
+            width: parent.width
+            height: 26
+            spacing: 4
 
             StyledSlider {
                 id: volumeSlider
 
-                anchors.fill: parent
-                anchors.margins: 4
+                width: parent.width
+                height: parent.height
                 resizeParent: false
-                tooltipText: Math.round(value * 200) + "%"
-                icon: userRow.localMute ? Icons.speakerSlash : Icons.speaker
+                tooltipText: Math.round(value * 100) + "%"
+                icon: tile.localMute ? Icons.speakerSlash : Icons.speakerHigh
                 iconClickable: false
+                // The wheel belongs to the participant grid; volume is
+                // drag-first.
+                scroll: false
                 smoothDrag: true
-                enabled: !userRow.localMute
-                opacity: userRow.localMute ? 0.4 : 1
+                enabled: !tile.localMute
+                opacity: tile.localMute ? 0.4 : 1
 
                 onValueChanged: {
-                    if (userRow.syncing)
+                    if (tile.syncing)
                         return;
-                    if (userRow.user)
-                        DiscordVoice.setUserVolume(userRow.userId, Math.round(value * 200));
+                    if (tile.user)
+                        DiscordVoice.setUserVolume(tile.userId, Math.round(value * 100));
                 }
 
                 Behavior on opacity {

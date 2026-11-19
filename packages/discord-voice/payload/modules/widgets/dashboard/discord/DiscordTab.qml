@@ -38,6 +38,28 @@ Rectangle {
         return list;
     }
 
+    // Responsive grid geometry: columns adapt so each new participant row
+    // fills up before the grid grows taller - four people land in a single
+    // row, five or six in a 3-wide pair, nine in a 3x3. Ties go to the
+    // fewer columns (the first count reaching the minimum row count wins),
+    // so low headcounts keep roomy tiles.
+    readonly property int gridColumns: {
+        var best = 2;
+        var bestRows = Number.MAX_SAFE_INTEGER;
+        for (var c = 2; c <= 4; c++) {
+            var rows = Math.ceil(discordTabRoot.participants.length / c);
+            if (rows < bestRows) {
+                best = c;
+                bestRows = rows;
+            }
+        }
+        return best;
+    }
+    readonly property real gridSpacing: 10
+    readonly property real tileWidth: participantGrid.width > 0
+            ? (participantGrid.width - (gridColumns - 1) * gridSpacing) / gridColumns
+            : 0
+
     // Self controls execute inside the plugin, so they only exist while the
     // plugin is connected - and they only make sense while in voice. There
     // is no blind-toggle mode without the transport.
@@ -204,22 +226,39 @@ Rectangle {
             }
         }
 
-        // --- Participants (only while in voice). Self leads the list in the
-        //     identical row style - Discord shows you among the participants
-        //     too - and the row hides the volume bar for itself. ---
-        ColumnLayout {
+        // --- Participants grid (only while in voice). Self leads the grid
+        //     in the identical tile style - Discord shows you among the
+        //     participants too - and the tile skips the bar for itself. The
+        //     grid fills all remaining height and scrolls once it
+        //     overflows; by absorbing that space it keeps the self controls
+        //     row pinned to the bottom edge no matter how many people
+        //     joined. ---
+        Flickable {
+            id: participantGrid
+
             visible: discordTabRoot.inVoice
-            spacing: 6
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            contentHeight: gridFlow.height
             Layout.fillWidth: true
+            Layout.fillHeight: true
 
-            Repeater {
-                model: discordTabRoot.participants
+            Flow {
+                id: gridFlow
 
-                DiscordUserRow {
-                    required property var modelData
+                width: participantGrid.width
+                spacing: discordTabRoot.gridSpacing
 
-                    user: modelData
-                    width: parent.width
+                Repeater {
+                    model: discordTabRoot.participants
+
+                    DiscordUserTile {
+                        required property var modelData
+
+                        user: modelData
+                        width: discordTabRoot.tileWidth
+                        height: implicitHeight
+                    }
                 }
             }
         }
@@ -290,17 +329,14 @@ Rectangle {
             }
         }
 
-        Item {
-            Layout.fillHeight: true
-        }
-
         // --- Self controls pinned to the bottom left: mute, deafen, camera,
-        //     leave. ControlButton has no intrinsic size, so each button
-        //     carries the dashboard's standard 48x48 preferred size (see
-        //     QuickControls). Self controls execute inside the plugin, so
-        //     they only exist while the plugin is connected - and they only
-        //     make sense while in voice. There is no blind-toggle mode
-        //     without the transport. ---
+        //     leave. The participants grid above fills the leftover height,
+        //     so this row stays docked while the grid scrolls. ControlButton
+        //     has no intrinsic size, so each button carries the dashboard's
+        //     standard 48x48 preferred size (see QuickControls). Self
+        //     controls execute inside the plugin, so they only exist while
+        //     the plugin is connected - and they only make sense while in
+        //     voice. There is no blind-toggle mode without the transport. ---
         RowLayout {
             visible: discordTabRoot.showControls
             spacing: 10
