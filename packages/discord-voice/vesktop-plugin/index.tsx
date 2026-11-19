@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import definePlugin from "@utils/types";
+import definePlugin, { PluginNative } from "@utils/types";
 import { onceReady } from "@webpack";
 import {
     ChannelStore,
@@ -24,6 +24,8 @@ import {
     VoiceStateStore
 } from "@webpack/common";
 import gitHash from "~git-hash";
+
+import type * as NativeModule from "./native";
 
 const PLUGIN_VERSION = "0.1.0";
 
@@ -62,24 +64,52 @@ interface WireState {
     users: WireUser[];
 }
 
-// --- Transport -------------------------------------------------------------
+// --- Transport ---------------------------------------------------------------
 //
-// M2 stub: lines land in the console so the DevTools checklist can verify
-// the serialization. M3 swaps in the PluginNative transport from native.ts
-// (unix socket to the mod) without touching anything above this comment.
+// On Vesktop the transport is the PluginNative helpers of native.ts (a unix
+// socket client on the main process). Anywhere else (web, other clients)
+// lines fall back to the console; the mod only exists for Vesktop setups.
+
+type NativeHelpers = PluginNative<typeof NativeModule>;
+
+const Native: NativeHelpers | undefined = IS_VESKTOP
+    ? VencordNative.pluginHelpers.AmbxstDiscord as NativeHelpers
+    : undefined;
 
 interface Transport {
-    sendLines(lines: string[]): void;
+    // Ordered, awaited line sends (hello before the first snapshot).
+    sendLines(lines: string[]): Promise<void>;
+    // Batched, order-insensitive speaking lines.
+    sendSpeakingBatch(lines: string[]): void;
 }
 
 const stubTransport: Transport = {
-    sendLines(lines) {
+    async sendLines(lines) {
+        for (const line of lines)
+            console.debug("[AmbxstDiscord]", line);
+    },
+    sendSpeakingBatch(lines) {
         for (const line of lines)
             console.debug("[AmbxstDiscord]", line);
     }
 };
 
-const transport: Transport = stubTransport;
+const nativeTransport: Transport | null = Native
+    ? {
+        async sendLines(lines) {
+            // One invoke per line preserves hello-before-snapshot.
+            for (const line of lines)
+                await Native.sendState(line);
+        },
+        sendSpeakingBatch(lines) {
+            // Fire and forget: a failed batch is retried by the next flush
+            // or superseded by the next snapshot; native drops silent.
+            void Native.sendSpeaking(lines);
+        }
+    }
+    : null;
+
+const transport: Transport = nativeTransport ?? stubTransport;
 
 // --- Speaking coalescing ----------------------------------------------------
 //
@@ -105,7 +135,7 @@ function flushSpeaking() {
     const lines = Array.from(speakingQueue, ([userId, on]) =>
         JSON.stringify({ t: "speaking", userId, on }));
     speakingQueue.clear();
-    transport.sendLines(lines);
+    transport.sendSpeakingBatch(lines);
 }
 
 // --- Serialization ----------------------------------------------------------
@@ -191,7 +221,106 @@ let ready = false;
 
 function pushState() {
     if (ready)
-        transport.sendLines([stateLine()]);
+        void transport.sendLines([stateLine()]);
+}
+
+// --- Session announce ---------------------------------------------------------
+//
+// The mod learns of the plugin through the hello line, and native has no
+// push channel, so the renderer polls status() and re-announces whenever the
+// native session counter moved (bridge down and back up: shell restart, or
+// the shell rebuilding while Vesktop stays open). Lines pushed into a dead
+// socket are dropped by native, so the bump guarantees a fresh hello plus a
+// full snapshot instead of silence.
+
+let lastSession = -1;
+let sessionPollTimer: ReturnType<typeof setInterval> | undefined;
+
+async function announce(session: number) {
+    lastSession = session;
+    await transport.sendLines([helloLine(), stateLine()]);
+}
+
+function startSessionPolling() {
+    if (sessionPollTimer !== undefined || !Native)
+        return;
+    sessionPollTimer = setInterval(() => {
+        void (async () => {
+            try {
+                const st = await Native.status();
+                if (st.connected && st.session !== lastSession)
+                    await announce(st.session);
+            } catch (e) {
+                console.warn("[AmbxstDiscord] status poll failed", e);
+            }
+        })();
+    }, 2000);
+}
+
+// --- Command loop --------------------------------------------------------------
+//
+// The page keeps exactly one nextCommand invoke in flight: native resolves
+// it when the shell sends a line, the renderer executes the op and answers
+// with Native.ack (plan 8.2). Op execution lands with the controls
+// milestone; until then unknown ops get a clean failure ack.
+
+let commandsRunning = false;
+
+async function runCommandLoop() {
+    if (commandsRunning || !Native)
+        return;
+    commandsRunning = true;
+
+    while (commandsRunning) {
+        let line: string | null;
+        try {
+            line = await Native.nextCommand();
+        } catch (e) {
+            console.warn("[AmbxstDiscord] command poll failed", e);
+            line = null;
+        }
+
+        if (!commandsRunning)
+            break;
+        if (line == null || line === "") {
+            // "Poll again" from native: pause briefly instead of hammering
+            // the invoke. Do not cancel this timer on stop - the loop exits
+            // on the flag check right after the pause.
+            await new Promise<void>(resolve => setTimeout(resolve, 200));
+            continue;
+        }
+        try {
+            await handleCommandLine(line);
+        } catch (e) {
+            console.warn("[AmbxstDiscord] command failed:", line, e);
+        }
+    }
+
+    commandsRunning = false;
+}
+
+interface BridgeCommand {
+    t?: string;
+    id?: number;
+    op?: string;
+    [key: string]: unknown;
+}
+
+async function handleCommandLine(line: string) {
+    if (!Native)
+        return;
+    let cmd: BridgeCommand;
+    try {
+        cmd = JSON.parse(line) as BridgeCommand;
+    } catch {
+        return;
+    }
+    if (cmd.t !== "cmd" || typeof cmd.id !== "number")
+        return;
+
+    // M4 dispatches volume.set / self.toggle / camera.toggle / voice.leave /
+    // state.get here.
+    await Native.ack(cmd.id, false, `op ${String(cmd.op)} not implemented yet`);
 }
 
 export default definePlugin({
@@ -224,12 +353,31 @@ export default definePlugin({
         // reads are only meaningful once the client finished loading.
         await onceReady;
         ready = true;
-        // hello announces the plugin to the mod; the first snapshot follows.
-        transport.sendLines([helloLine(), stateLine()]);
+
+        if (Native) {
+            startSessionPolling();
+            void runCommandLoop();
+            try {
+                const st = await Native.status();
+                if (st.connected)
+                    await announce(st.session);
+            } catch (e) {
+                console.warn("[AmbxstDiscord] initial status failed", e);
+            }
+            return;
+        }
+
+        // Stub transport (no Vesktop): announce unconditionally, console only.
+        await transport.sendLines([helloLine(), stateLine()]);
     },
 
     stop() {
         ready = false;
+        commandsRunning = false;
+        if (sessionPollTimer !== undefined) {
+            clearInterval(sessionPollTimer);
+            sessionPollTimer = undefined;
+        }
         if (speakingTimer !== undefined) {
             clearTimeout(speakingTimer);
             speakingTimer = undefined;
