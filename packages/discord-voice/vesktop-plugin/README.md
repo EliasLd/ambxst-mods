@@ -11,20 +11,22 @@ User-facing install and troubleshooting steps live in the package
 
 | file | role |
 |---|---|
-| `index.tsx` | renderer side: voice state serialization, speaking coalescing (30 ms), op execution (M4) |
-| `native.ts` | Vesktop main process side (M3): unix socket transport with backoff reconnect |
+| `index.tsx` | renderer side: voice state serialization, speaking coalescing (30 ms), op execution |
+| `native.ts` | Vesktop main process side: unix socket transport with backoff reconnect and the long-poll command path |
 | `VENCORD_REF` | the Vencord ref all published builds are pinned to |
 
 ## Local build
 
-Injects the plugin into a checkout of Vencord at the pinned ref and builds
-the four Vesktop files:
+The repo-root script does the whole round trip:
 
 ```
-git clone --depth 1 --branch "$(cat VENCORD_REF)" https://github.com/Vencord/Vencord /tmp/vencord-build
-rsync -a --delete ./ /tmp/vencord-build/src/userplugins/ambxst-discord/
-cd /tmp/vencord-build && pnpm install --frozen-lockfile && pnpm build
+sh scripts/discord-plugin-build.sh              # default pin, default tmp dir
+sh scripts/discord-plugin-build.sh --ref v1.15.18 --out /tmp/artifacts
 ```
 
-Build outputs land in `/tmp/vencord-build/dist/`. M5 ships
-`scripts/discord-plugin-build.sh` which does this without the manual steps.
+It clones Vencord at the ref, injects this directory as
+`src/userplugins/ambxst-discord/` (index.tsx + native.ts only), runs
+`pnpm install && pnpm build` and verifies the four artifacts Vesktop loads
+(`vencordDesktopMain.js`, `vencordDesktopPreload.js`,
+`vencordDesktopRenderer.js`, `vencordDesktopRenderer.css`). CI runs the same
+steps in `.github/workflows/discord-build.yml`.

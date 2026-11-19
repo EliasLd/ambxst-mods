@@ -4,9 +4,11 @@ Adds a **Discord voice tab** to the Ambxst dashboard. The tab shows who is in
 your Vesktop voice channel and controls your voice session:
 
 - Participants with avatar, display name, mic / deafen / suppressed state and
-  a speaking indicator.
+  a speaking indicator; you appear in the same style, without a volume bar
+  (a local volume does not apply to yourself).
 - Per-user local volume, the same "user volume" Discord's own slider edits.
-- Self controls: mic mute, deafen, camera and leave voice channel.
+- Self controls: mic mute, deafen, camera and leave voice channel, docked to
+  the bottom left of the tab.
 
 It works with **Vesktop only** (the Vesktop fork with Vencord support in the
 Ambxst ecosystem). Two cooperating pieces make it work:
@@ -44,6 +46,10 @@ toggle, rebuild. Restart Ambxst afterwards.
 
 ### 2. The companion plugin
 
+Run the installer only while Vesktop is completely closed - Vesktop rewrites
+its state.json from memory on exit, and would undo the change (the script
+refuses to run while Vesktop is up and tells you so).
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/EliasLd/ambxst-mods/main/scripts/discord-install.sh | sh
 ```
@@ -51,24 +57,34 @@ curl -fsSL https://raw.githubusercontent.com/EliasLd/ambxst-mods/main/scripts/di
 The script downloads the companion Vencord build (checksums verified against
 SHA256SUMS), extracts the 4 plugin files to
 `~/.local/share/ambxst-discord/vencord/`, and points Vesktop's
-`vencordDir` override in `~/.config/Vesktop/state.json` at that directory. It
-never kills Vesktop; when Vesktop is running it asks you to close and
-relaunch it afterwards. Flatpak Vesktop is not supported (different state
-file location).
+`vencordDir` override in `~/.config/vesktop/state.json` at that directory. It
+never kills Vesktop and never touches anything beyond those two locations.
+Flatpak Vesktop is not supported (different state file location).
+
+Flags the script understands: `--latest` (install the rolling build instead
+of the one pinned to the repo ref), `--dir <path>` (custom data directory),
+`--build` (build the plugin locally first, needs git + node + pnpm), and
+`--uninstall`.
 
 Then close Vesktop fully, relaunch it, and restart Ambxst.
+
+One step is manual: once, after the first install, open Vesktop's settings
+(only after it was launched with the override in place), go to
+**Settings -> Plugins** and enable `AmbxstDiscord` (it ships disabled by
+default). It stays enabled across Vesktop updates.
 
 ### First-run checklist
 
 1. Install the mod, enable it, rebuild, restart Ambxst.
 2. Run the installer, close Vesktop fully, relaunch Vesktop.
-3. Optionally add the keybind in your hyprland config:
+3. Enable `AmbxstDiscord` in Vesktop: Settings -> Plugins.
+4. Optionally add the keybind in your hyprland config:
 
 ```sh
 bind = $mainMod, V, exec, ambxst run discord
 ```
 
-4. Open the dashboard (or press the bind): the Companion chip lit means the
+5. Open the dashboard (or press the bind): the Companion chip lit means the
    stack is up. Join a voice channel in Vesktop: participants appear.
 
 The keybind accepts both `ambxst run discord` and
@@ -98,10 +114,17 @@ The keybind accepts both `ambxst run discord` and
 | Symptom | Cause / fix |
 |---|---|
 | Tab missing entirely | mod disabled, or `ambxst mods rebuild` not run |
-| "Companion" chip dark | Vesktop not running, or the plugin missing or disabled: start Vesktop, run the installer, and check that `AmbxstDiscord` is enabled in Vencord settings |
+| "Companion" chip dark | Vesktop not running, or the plugin missing or disabled: run the installer (with Vesktop closed), and check that `AmbxstDiscord` is enabled in Vesktop's Settings -> Plugins |
 | Self buttons do nothing | the plugin is not connected: they only exist while the plugin is up and you are in voice |
 | Plugin vanished after a Vesktop repair | expected overwrite; re-run the installer |
 | Volume slider not visible in a row | the plugin could not reach Discord's internal volume module; the rest still works |
+
+## Local builds of the plugin
+
+For development, `scripts/discord-plugin-build.sh` in the repository root
+builds the companion bundle from the ref pinned in `vesktop-plugin/VENCORD_REF`
+(see `vesktop-plugin/README.md`). The installer's `--build` flag runs it and
+installs the result instead of a release download.
 
 ## Compatibility
 
