@@ -116,14 +116,16 @@ const transport: Transport = nativeTransport ?? stubTransport;
 // Resolved the same way Vencord plugins do, all named props verified against
 // the current voice bundle:
 // - voiceSettings: the module whose functions the voice UI itself calls
-//   (setSelfMute / setLocalVolume / toggleSelfMute / toggleSelfDeaf live
-//   together on its default export, hence the nested-export props find).
+//   (setSelfMute / setLocalVolume / toggleSelfMute / toggleSelfDeaf /
+//   toggleLocalMute live together on its default export, hence the
+//   nested-export props find).
 // - channelActions: selectVoiceChannel + selectChannel (userVoiceShow
 //   precedent); selectVoiceChannel(null) is Discord's own disconnect flow.
 // - SpeakingStore: displayName-located FluxStore backing the speaking rings.
 
 interface VoiceSettingsActions {
     setLocalVolume(userId: string, volume: number): void;
+    toggleLocalMute(userId: string): void;
     toggleSelfMute(options?: Record<string, unknown>): void;
     toggleSelfDeaf(options?: Record<string, unknown>): void;
 }
@@ -367,7 +369,7 @@ interface BridgeCommand {
     id?: number;
     op?: string;
     userId?: string;
-    value?: number;
+    value?: number | boolean;
     kind?: string;
     [key: string]: unknown;
 }
@@ -416,6 +418,19 @@ async function executeCommand(cmd: BridgeCommand): Promise<string | null> {
             const value = Math.max(0, Math.min(200, Math.round(cmd.value)));
             voiceSettingsActions?.setLocalVolume(cmd.userId, value);
             return voiceSettingsActions ? null : "voice actions module not found";
+        }
+        case "volume.localMute": {
+            if (typeof cmd.userId !== "string" || !cmd.userId
+                || typeof cmd.value !== "boolean")
+                return "volume.localMute needs a userId and a boolean value";
+            if (!voiceSettingsActions?.toggleLocalMute || typeof MediaEngineStore?.isLocalMute !== "function")
+                return "local mute not reachable";
+            // toggleLocalMute is a toggle, the wire carries a desired value:
+            // flip only when they differ, so a fast second click that races
+            // the ack cannot undo the first one.
+            if ((MediaEngineStore.isLocalMute(cmd.userId) ?? false) !== cmd.value)
+                voiceSettingsActions.toggleLocalMute(cmd.userId);
+            return null;
         }
         case "self.toggle": {
             if (cmd.kind !== "mute" && cmd.kind !== "deafen")
