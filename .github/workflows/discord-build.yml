@@ -39,6 +39,9 @@ jobs:
       - name: Clone Vencord at the pinned ref
         run: |
           git clone --depth 1 --branch "${{ steps.ref.outputs.ref }}" https://github.com/Vencord/Vencord vencord
+          # userplugins are untracked upstream: a fresh clone never
+          # materializes the directory, so create it before injecting.
+          mkdir -p vencord/src/userplugins
           rsync -a --delete "$PLUGIN_DIR/" vencord/src/userplugins/ambxst-discord/
           rm vencord/src/userplugins/ambxst-discord/VENCORD_REF vencord/src/userplugins/ambxst-discord/README.md
 
