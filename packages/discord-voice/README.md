@@ -3,9 +3,11 @@
 Adds a **Discord voice tab** to the Ambxst dashboard. The tab shows who is in
 your Vesktop voice channel and controls your voice session:
 
-- Participants as compact tiles in a responsive grid (avatar with speaking
-  glow, display name, mic / deafen state badge); you appear in the same
-  style, without a volume bar (a local volume does not apply to yourself).
+- Participants as compact tiles in a fixed four-tile grid (avatar with
+  speaking glow, display name, mic / deafen state badge); the layout is the
+  same at any headcount, so your tile stays far-left and quarter-width
+  whether you are alone or with three others. You appear in the same style,
+  without a volume bar (a local volume does not apply to yourself).
   The grid scrolls and the self controls stay docked when many people are
   in the channel.
 - Per-user local volume, the same "user volume" Discord's own slider edits,
