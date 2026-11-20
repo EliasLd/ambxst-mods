@@ -1,5 +1,5 @@
 diff --git a/modules/components/TintedWallpaper.qml b/modules/components/TintedWallpaper.qml
-index 9419459..0022bcc 100644
+index 9419459f..0022bcc5 100644
 --- a/modules/components/TintedWallpaper.qml
 +++ b/modules/components/TintedWallpaper.qml
 @@ -1,6 +1,7 @@
@@ -43,7 +43,7 @@ index 9419459..0022bcc 100644
              // Tint layer
              layer.enabled: root.tintEnabled
 diff --git a/modules/lockscreen/LockScreen.qml b/modules/lockscreen/LockScreen.qml
-index c8ffe5d..dbf2fac 100644
+index c8ffe5dd..dbf2facc 100644
 --- a/modules/lockscreen/LockScreen.qml
 +++ b/modules/lockscreen/LockScreen.qml
 @@ -11,6 +11,7 @@ import qs.modules.components
@@ -70,7 +70,7 @@ index c8ffe5d..dbf2fac 100644
          }
  
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index e830322..5ddd530 100644
+index e830322a..5ddd5308 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 @@ -1056,7 +1056,9 @@ PanelWindow {
@@ -108,7 +108,7 @@ index e830322..5ddd530 100644
                      layer.effect: ShaderEffect {
                          property var paletteTexture: paletteTextureSource
 diff --git a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
-index 195fd45..97865f5 100644
+index 195fd45f..c539eb67 100644
 --- a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
 +++ b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
 @@ -84,6 +84,17 @@ FocusScope {
@@ -129,17 +129,18 @@ index 195fd45..97865f5 100644
          }
      ]
  
-@@ -807,6 +818,9 @@ FocusScope {
+@@ -807,6 +818,10 @@ FocusScope {
          Item {
              Layout.fillWidth: true
              Layout.preferredHeight: wallpapersFilterBar.height
-+            // Keep this row above the grid so the mode selector's expanded
-+            // list paints over it.
-+            z: 1000
++            // Above the grid (z 0) so the mode selector's expanded list
++            // paints over it, but below the search row's upstream 1000, so
++            // the expanded scheme list paints over this row's pill.
++            z: 999
  
              FilterBar {
                  id: wallpapersFilterBar
-@@ -830,6 +844,22 @@ FocusScope {
+@@ -830,6 +845,39 @@ FocusScope {
                      wallpapersTabRoot.focusPreviousElement();
                  }
              }
@@ -158,6 +159,23 @@ index 195fd45..97865f5 100644
 +                onTabPressed: wallpapersTabRoot.focusNextElement();
 +
 +                onShiftTabPressed: wallpapersTabRoot.focusPreviousElement();
++            }
++
++            // The two dropdowns are exclusive: expanding one collapses the
++            // other (previously only an effect of click focus).
++            Connections {
++                target: schemeSelector
++                function onSchemeListExpandedChanged() {
++                    if (schemeSelector.schemeListExpanded)
++                        wallpaperModeSelector.modeListExpanded = false;
++                }
++            }
++            Connections {
++                target: wallpaperModeSelector
++                function onModeListExpandedChanged() {
++                    if (wallpaperModeSelector.modeListExpanded)
++                        schemeSelector.schemeListExpanded = false;
++                }
 +            }
          }
  

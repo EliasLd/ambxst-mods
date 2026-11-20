@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- The layout-mode dropdown no longer paints over the expanded scheme
+  (accent color) list; the filter row drops below the search row's layer.
+  Opening one dropdown also closes the other.
+
 ## 0.2.1
 
 - Compatibility with Ambxst 1.4.1: the sources the mod composes against are
