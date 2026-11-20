@@ -38,23 +38,10 @@ Rectangle {
         return list;
     }
 
-    // Responsive grid geometry: columns adapt so each new participant row
-    // fills up before the grid grows taller - four people land in a single
-    // row, five or six in a 3-wide pair, nine in a 3x3. Ties go to the
-    // fewer columns (the first count reaching the minimum row count wins),
-    // so low headcounts keep roomy tiles.
-    readonly property int gridColumns: {
-        var best = 2;
-        var bestRows = Number.MAX_SAFE_INTEGER;
-        for (var c = 2; c <= 4; c++) {
-            var rows = Math.ceil(discordTabRoot.participants.length / c);
-            if (rows < bestRows) {
-                best = c;
-                bestRows = rows;
-            }
-        }
-        return best;
-    }
+    // Fixed four-tile geometry: the grid always uses the full-channel
+    // layout (one row of four quarter-width tiles, self at the far left),
+    // whatever the headcount; the flow wraps rows of four when more join.
+    readonly property int gridColumns: 4
     readonly property real gridSpacing: 10
     readonly property real tileWidth: participantGrid.width > 0
             ? (participantGrid.width - (gridColumns - 1) * gridSpacing) / gridColumns
