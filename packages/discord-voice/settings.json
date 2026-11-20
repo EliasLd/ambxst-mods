@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/settings.schema.json",
+  "version": 1,
+  "fields": [
+    {
+      "key": "speakingGlow",
+      "label": "Speaking glow",
+      "description": "Animate a glow around participants while they speak.",
+      "type": "boolean",
+      "default": true,
+      "restartRequired": false
+    },
+    {
+      "key": "debugState",
+      "label": "Show protocol state",
+      "description": "Render the raw bridge JSON at the bottom of the tab.",
+      "type": "boolean",
+      "default": false,
+      "restartRequired": false
+    }
+  ]
+}

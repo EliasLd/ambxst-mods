@@ -1,0 +1,114 @@
+# Builds and publishes the AmbxstDiscord companion Vencord bundle.
+#
+# Two releases are kept with the same assets:
+# - discord-vencord-<ref>: pinned build for the ref in VENCORD_REF (the
+#   installer default)
+# - discord-latest: rolling build kept near upstream (installer fallback)
+#
+# The zip contains only the four built Vencord files; SHA256SUMS covers them.
+# AGPL note: Vencord is AGPL-3.0. Publishing a modified build is compliant as
+# long as the modified source (this repository) and the injected ref stay
+# public, which both do.
+
+name: discord build
+
+on:
+  push:
+    paths:
+      - "packages/discord-voice/vesktop-plugin/**"
+      # Also rebuild when the pipeline itself changes, or a CI fix never
+      # gets exercised.
+      - ".github/workflows/discord-build.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_DIR: packages/discord-voice/vesktop-plugin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pinned Vencord ref
+        id: ref
+        run: |
+          echo "ref=$(cat $PLUGIN_DIR/VENCORD_REF | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Clone Vencord at the pinned ref
+        run: |
+          git clone --depth 1 --branch "${{ steps.ref.outputs.ref }}" https://github.com/Vencord/Vencord vencord
+          # userplugins are untracked upstream: a fresh clone never
+          # materializes the directory, so create it before injecting.
+          mkdir -p vencord/src/userplugins
+          rsync -a --delete "$PLUGIN_DIR/" vencord/src/userplugins/ambxst-discord/
+          rm vencord/src/userplugins/ambxst-discord/VENCORD_REF vencord/src/userplugins/ambxst-discord/README.md
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: vencord/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build
+        working-directory: vencord
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Verify artifacts
+        working-directory: vencord/dist
+        run: |
+          for f in vencordDesktopMain.js vencordDesktopPreload.js vencordDesktopRenderer.js vencordDesktopRenderer.css; do
+            test -s "$f" || { echo "missing or empty: $f"; exit 1; }
+          done
+
+      - name: Package
+        working-directory: vencord/dist
+        run: |
+          zip discord-vencord-files.zip \
+            vencordDesktopMain.js \
+            vencordDesktopPreload.js \
+            vencordDesktopRenderer.js \
+            vencordDesktopRenderer.css
+          # The installer verifies the zip in its temp dir, so the sums file
+          # covers exactly what ships: the zip itself.
+          sha256sum discord-vencord-files.zip > SHA256SUMS
+
+      # Rolling release: delete the previous one (with its tag) then publish.
+      # The pinned release only gets created when the ref changes.
+      - name: Publish discord-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ steps.ref.outputs.ref }}
+        run: |
+          gh release delete discord-latest --yes --cleanup-tag || true
+          gh release create discord-latest \
+            --title "Discord voice companion build (rolling)" \
+            --notes "Rolling build of the AmbxstDiscord companion plugin, injected into Vencord at $REF. Install with the one-liner in packages/discord-voice/README.md. Verify with SHA256SUMS." \
+            vencord/dist/discord-vencord-files.zip \
+            vencord/dist/SHA256SUMS
+
+      - name: Publish pinned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ steps.ref.outputs.ref }}
+        run: |
+          TAG="discord-vencord-$REF"
+          EXISTS=$(gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.id' 2> /dev/null || echo "")
+          if [ -z "$EXISTS" ]; then
+            gh release create "$TAG" \
+              --title "Discord voice companion build (Vencord $REF)" \
+              --notes "Pinned build of the AmbxstDiscord companion plugin for Vencord $REF. Same assets as discord-latest when refs match. Verify with SHA256SUMS." \
+              vencord/dist/discord-vencord-files.zip \
+              vencord/dist/SHA256SUMS
+          else
+            echo "Pinned release $TAG already exists; leaving it untouched."
+          fi

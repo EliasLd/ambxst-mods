@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "eliasld.discord-voice",
+  "name": "Discord voice",
+  "version": "0.1.0",
+  "description": "Adds a Discord voice tab to the dashboard: see who is in your Vesktop voice channel, control their local volume, and control your mic, deafen, camera and voice connection.",
+  "license": "MIT",
+  "author": "EliasLd",
+  "authorUrl": "https://github.com/EliasLd",
+  "homepage": "https://github.com/EliasLd/ambxst-mods/tree/main/packages/discord-voice",
+  "changelog": "CHANGELOG.md",
+  "localization": { "mode": "none" },
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.15 <1.5.0",
+    "testedBaseCommits": [
+      "5d71e924212ce2c0203e7448e0b1e3db52608640",
+      "5db90ba000713b5cb991a2abce1b766ab47fbd2b",
+      "5bb2b95d6d55de6ef40fa64720dfec1209fe8fd3"
+    ]
+  },
+  "permissions": [
+    "Connects to Vesktop's runtime-dir Unix socket to trigger voice shortcuts (mute, deafen, camera, leave)",
+    "Hosts a Unix socket in the runtime directory that the companion Vencord plugin connects to",
+    "Displays voice-channel participant names and Discord CDN avatar images"
+  ],
+  "settings": {
+    "schema": "settings.json"
+  },
+  "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/DiscordVoice.qml",
+      "target": "modules/services/DiscordVoice.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/discord/DiscordTab.qml",
+      "target": "modules/widgets/dashboard/discord/DiscordTab.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/discord/DiscordUserTile.qml",
+      "target": "modules/widgets/dashboard/discord/DiscordUserTile.qml"
+    },
+    {
+      "type": "patch",
+      "source": "patches/discord-voice.patch"
+    }
+  ]
+}
