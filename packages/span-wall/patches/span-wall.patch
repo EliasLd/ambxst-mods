@@ -1,5 +1,5 @@
 diff --git a/modules/components/TintedWallpaper.qml b/modules/components/TintedWallpaper.qml
-index 9419459f..0022bcc5 100644
+index 9419459f..67c21ce5 100644
 --- a/modules/components/TintedWallpaper.qml
 +++ b/modules/components/TintedWallpaper.qml
 @@ -1,6 +1,7 @@
@@ -21,7 +21,7 @@ index 9419459f..0022bcc5 100644
  
      readonly property bool isVideo: {
          var ext = source.toString().toLowerCase().split('?')[0].split('.').pop();
-@@ -173,12 +178,19 @@ Item {
+@@ -173,12 +178,21 @@ Item {
          Image {
              mipmap: true
              id: rawImage
@@ -34,7 +34,10 @@ index 9419459f..0022bcc5 100644
 +            height: root.spanActive ? SpanWall.virtualRect.height : parent.height
              visible: !root.isVideo
              source: root.isVideo ? "" : root.source
-             fillMode: Image.PreserveAspectCrop
+-            fillMode: Image.PreserveAspectCrop
++            // Stock per-screen keeps the crop; a spanning layout picks
++            // Fill/Fit/Stretch via the service.
++            fillMode: SpanWall.spanActive ? SpanWall.spanFillMode : Image.PreserveAspectCrop
              asynchronous: true
              smooth: true
 +            sourceSize.width: root.spanActive ? SpanWall.virtualRect.width : 0
@@ -70,7 +73,7 @@ index c8ffe5dd..dbf2facc 100644
          }
  
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index e830322a..5ddd5308 100644
+index e830322a..96f17b1c 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 @@ -1056,7 +1056,9 @@ PanelWindow {
@@ -84,7 +87,7 @@ index e830322a..5ddd5308 100644
          }
      }
  
-@@ -1202,13 +1204,19 @@ PanelWindow {
+@@ -1202,13 +1204,21 @@ PanelWindow {
                  Image {
                      mipmap: true
                      id: rawImage
@@ -97,7 +100,10 @@ index e830322a..5ddd5308 100644
 +                    width: SpanWall.spanActive ? SpanWall.virtualRect.width : wallpaper.width
 +                    height: SpanWall.spanActive ? SpanWall.virtualRect.height : wallpaper.height
                      source: parent.sourceFile ? "file://" + parent.sourceFile : ""
-                     fillMode: Image.PreserveAspectCrop
+-                    fillMode: Image.PreserveAspectCrop
++                    // Stock per-screen keeps the crop; a spanning layout
++                    // picks Fill/Fit/Stretch via the service.
++                    fillMode: SpanWall.spanActive ? SpanWall.spanFillMode : Image.PreserveAspectCrop
                      asynchronous: true
                      smooth: true
 -                    sourceSize.width: wallpaper.width

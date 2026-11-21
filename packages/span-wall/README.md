@@ -6,20 +6,27 @@ content filter row, modelled after the scheme selector on the same tab.
 - **Per Screen** — Ambxst's default: the wallpaper is cropped to each screen,
   and the per-screen checkbox pins individual wallpapers to individual
   monitors.
-- **Span** — the current wallpaper is scaled uniformly over the bounding box
-  of all monitors and every monitor shows its slice, the way Wallpaper
-  Engine's "span" does it. Rotation of a monitor is handled by the compositor,
-  no configuration needed.
+- **Fill** — the current wallpaper is scaled uniformly over the bounding box
+  of all monitors and every monitor shows its slice; this is the previous
+  "Span" behavior. Rotation of a monitor is handled by the compositor, no
+  configuration needed.
+- **Fit** — the whole wallpaper stays visible across the desktop, centered,
+  with empty bars on wide desktops.
+- **Stretch** — the wallpaper is distorted to cover the whole desktop exactly.
+- **Center** — the wallpaper is drawn at its original size, centered on the
+  whole desktop; when it is larger, it is cropped at the desktop edges.
+  Needs a Qt with `Image.Pad` (6.9+) — older setups fall back to cropping.
 
 ## Behavior notes
 
-- Span is a whole-desktop mode: while it is active, per-screen pins are
-  ignored but never deleted — switching back to Per Screen restores them.
-- Span applies to static images. Videos and GIFs keep Ambxst's per-screen
+- The spanning modes (Fill, Fit, Stretch) are whole-desktop modes: while one
+  is active, per-screen pins are ignored but never deleted — switching back
+  to Per Screen restores them.
+- Spanning applies to static images. Videos and GIFs keep Ambxst's per-screen
   rendering.
-- The lockscreen follows the layout mode: under Span its static wallpaper is
-  continuous across screens. Lockscreen videos and GIFs keep playing per
-  screen.
+- The lockscreen follows the layout mode: under a spanning mode its static
+  wallpaper is continuous across screens. Lockscreen videos and GIFs keep
+  playing per screen.
 - The mode is stored in the mod's settings (Settings -> Mods -> Span wall) and
   the dropdown there stays in sync with the one in the Wallpapers tab.
 - With only one monitor the dropdown hides itself and the mode is inert.
@@ -27,7 +34,8 @@ content filter row, modelled after the scheme selector on the same tab.
 
 If you also use a mod that hands wallpaper rendering to an external daemon
 (such as ambxst-skwd-wall), that daemon's surfaces draw above Ambxst's, so
-Span has no visible effect while it is active. Disable such a mod to use Span.
+spanning has no visible effect while it is active. Disable such a mod to use
+a spanning layout.
 
 ## Install
 
