@@ -27,7 +27,7 @@ import gitHash from "~git-hash";
 
 import type * as NativeModule from "./native";
 
-const PLUGIN_VERSION = "0.1.0";
+const PLUGIN_VERSION = "0.1.1";
 
 // How long speaking transitions are debounced before being sent. Discord can
 // emit rapid toggles; coalescing keeps the protocol sparse.
@@ -309,6 +309,8 @@ async function announce(session: number) {
 function startSessionPolling() {
     if (sessionPollTimer !== undefined || !Native)
         return;
+    // 1 s caps how long a (re)connect waits for its hello + snapshot; the
+    // status invoke only reads two numbers.
     sessionPollTimer = setInterval(() => {
         void (async () => {
             try {
@@ -319,7 +321,7 @@ function startSessionPolling() {
                 console.warn("[AmbxstDiscord] status poll failed", e);
             }
         })();
-    }, 2000);
+    }, 1000);
 }
 
 // --- Command loop --------------------------------------------------------------

@@ -22,12 +22,12 @@ const RUNTIME_DIR = process.env.XDG_RUNTIME_DIR ?? "/tmp";
 const SOCKET_PATH = `${RUNTIME_DIR}/ambxst_discord.sock`;
 
 // The shell may be off, rebuilding or disabled: back off exponentially from
-// 1 s to a 5 s ceiling, then reset once a connection succeeds. A refused
+// 1 s to a 2 s ceiling, then reset once a connection succeeds. A refused
 // attempt is one silent syscall now that every error path is handled, so a
-// short ceiling keeps the tab's companion chip faithful within seconds of
-// the shell restarting.
+// tight ceiling keeps the tab's companion chip faithful within a couple of
+// seconds of the shell restarting.
 const RECONNECT_BASE_MS = 1000;
-const RECONNECT_MAX_MS = 5_000;
+const RECONNECT_MAX_MS = 2_000;
 
 // Newlines frame the protocol, so no payload may smuggle one; 3 MiB is the
 // same order of magnitude the mod side tolerates per line.
