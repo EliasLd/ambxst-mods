@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- The layout dropdown gains Fill, Fit, Stretch and Center for spanning:
+  Fill is the previous span behavior (cover and crop), Fit never crops
+  (empty side bars on wide desktops), Stretch distorts to cover exactly,
+  Center draws the image at its original size, centered (cropped at the
+  desktop edges when larger). Per Screen is unchanged; a stored Span
+  setting migrates to Fill.
+
 ## 0.2.2
 
 - The layout-mode dropdown no longer paints over the expanded scheme

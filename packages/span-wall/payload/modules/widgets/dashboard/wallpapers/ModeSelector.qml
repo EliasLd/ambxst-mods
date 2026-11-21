@@ -12,6 +12,8 @@ import qs.config
 // a pill whose option list expands downward and paints over the content below
 // (the tab keeps this row above the grid via z). Lives at the far right of the
 // filter row; hidden on single-monitor setups where the mode is meaningless.
+// Fill covers and crops, Fit never crops, Stretch distorts, Center draws
+// the image unscaled.
 Item {
     id: root
 
@@ -20,7 +22,10 @@ Item {
 
     readonly property var modes: [
         { id: "per-screen", label: "Per Screen" },
-        { id: "span", label: "Span" }
+        { id: "fill", label: "Fill" },
+        { id: "fit", label: "Fit" },
+        { id: "stretch", label: "Stretch" },
+        { id: "center", label: "Center" }
     ]
 
     // Index of the actually active mode, derived from the persisted setting.

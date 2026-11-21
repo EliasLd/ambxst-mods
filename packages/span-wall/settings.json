@@ -5,12 +5,15 @@
     {
       "key": "mode",
       "label": "Wallpaper layout",
-      "description": "Per Screen: each screen gets the wallpaper cropped to it (Ambxst default). Span: one image covered across the whole desktop; every screen shows its slice.",
+      "description": "Per Screen: each screen gets the wallpaper cropped to it (Ambxst default). Fill: one image covered across the whole desktop, cropped like the desktop was one screen. Fit: one image across the whole desktop, never cropped (empty side bars). Stretch: one image distorted to cover the whole desktop exactly. Center: the wallpaper drawn at its original size, centered on the whole desktop (cropped at the desktop edges when larger).",
       "type": "enum",
       "default": "per-screen",
       "options": [
         { "label": "Per Screen", "value": "per-screen" },
-        { "label": "Span", "value": "span" }
+        { "label": "Fill", "value": "fill" },
+        { "label": "Fit", "value": "fit" },
+        { "label": "Stretch", "value": "stretch" },
+        { "label": "Center", "value": "center" }
       ],
       "restartRequired": false
     }
