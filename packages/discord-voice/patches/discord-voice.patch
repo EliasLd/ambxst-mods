@@ -1,8 +1,20 @@
 diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShortcuts.qml
-index 894ec7b9..16779b51 100644
+index 894ec7b9..06831bff 100644
 --- a/modules/services/GlobalShortcuts.qml
 +++ b/modules/services/GlobalShortcuts.qml
-@@ -51,6 +51,10 @@ QtObject {
+@@ -12,6 +12,11 @@ QtObject {
+     id: root
+ 
+     readonly property string appId: "ambxst"
++    // QML singletons come up on first access, and only the keybind cases
++    // in run() name DiscordVoice - so the bridge would not start until the
++    // first tab open or keybind. Binding it here boots the service (and
++    // its socket server) with this singleton at shell start.
++    readonly property var discordVoiceService: DiscordVoice
+     // Per-user runtime dir instead of /tmp: /tmp is world-shared and its
+     // sticky bit lets a second local account permanently squat the FIFO.
+     // The shell expression keeps this working even when XDG_RUNTIME_DIR
+@@ -51,6 +56,10 @@ QtObject {
              case "dashboard-widgets": toggleDashboardTab(0); break;
              case "dashboard-wallpapers": toggleDashboardTab(1); break;
              case "dashboard-kanban": toggleDashboardTab(2); break;

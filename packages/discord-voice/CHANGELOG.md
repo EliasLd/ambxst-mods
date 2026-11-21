@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- The voice bridge comes up with the shell instead of waiting for the
+  first tab open or keybind press; the companion plugin reconnects
+  within a couple of seconds after a shell restart.
+
 ## 0.1.1
 
 - The participant grid always uses the full-channel four-tile layout: the
