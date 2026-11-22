@@ -143,7 +143,10 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: tile.deafened ? Icons.speakerX : Icons.micSlash
-                    color: Colors.overError
+                    // Pure white for contrast on the black badge: the
+                    // theme's own white is tone-mapped per wallpaper and
+                    // the semantic error color reads dark red on it.
+                    color: "white"
                     font.family: Icons.font
                     font.pixelSize: 10
                 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- The avatar photo fills its circle edge-to-edge like Discord's, instead
+  of floating inside a black backing disc; the speaking ring rides the
+  photo rim.
+- Mute, deafen and suppressed badge icons are white instead of theme
+  red, to read on the black badge like Discord's own.
+
 ## 0.1.2
 
 - The voice bridge comes up with the shell instead of waiting for the
