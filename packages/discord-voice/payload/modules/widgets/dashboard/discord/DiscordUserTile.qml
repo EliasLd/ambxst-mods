@@ -65,6 +65,9 @@ Rectangle {
                 id: glowRing
 
                 anchors.fill: parent
+                // Paints over the photo (the photo now fills the whole
+                // circle, so the rim is the only place left for the ring).
+                z: 1
                 radius: width / 2
                 color: "transparent"
                 // A 3px ring: anything thinner disappears next to an avatar
@@ -97,7 +100,6 @@ Rectangle {
                 id: avatarBox
 
                 anchors.fill: glowRing
-                anchors.margins: 3
                 radius: width / 2
                 variant: "pane"
 
@@ -105,7 +107,6 @@ Rectangle {
                     id: avatarImage
 
                     anchors.fill: parent
-                    anchors.margins: 2
                     visible: tile.user && tile.user.avatarUrl !== ""
                     source: visible ? tile.user.avatarUrl : ""
                     mipmap: true
@@ -128,6 +129,8 @@ Rectangle {
             // badge material - the volume bar carries it.
             StyledRect {
                 visible: tile.deafened || tile.muted || tile.suppressed
+                // Above the ring band so the rim never crosses the badge.
+                z: 2
                 width: 16
                 height: 16
                 radius: 8
