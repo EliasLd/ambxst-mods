@@ -8,8 +8,8 @@ your Vesktop voice channel and controls your voice session:
   same at any headcount, so your tile stays far-left and quarter-width
   whether you are alone or with three others. You appear in the same style,
   without a volume bar (a local volume does not apply to yourself).
-  The grid scrolls and the self controls stay docked when many people are
-  in the channel.
+  The self controls dock into the tab's bottom margin, so two rows of
+  tiles clear them; the grid still scrolls when more people join.
 - Per-user local volume, the same "user volume" Discord's own slider edits,
   and a local mute button per participant.
 - Self controls: mic mute, deafen, camera and leave voice channel, docked to

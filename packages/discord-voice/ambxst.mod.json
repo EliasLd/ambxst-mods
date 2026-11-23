@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "eliasld.discord-voice",
   "name": "Discord voice",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Adds a Discord voice tab to the dashboard: see who is in your Vesktop voice channel, control their local volume, and control your mic, deafen, camera and voice connection.",
   "license": "MIT",
   "author": "EliasLd",
