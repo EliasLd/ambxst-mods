@@ -216,17 +216,20 @@ Rectangle {
         // --- Participants grid (only while in voice). Self leads the grid
         //     in the identical tile style - Discord shows you among the
         //     participants too - and the tile skips the bar for itself. The
-        //     grid fills all remaining height and scrolls once it
-        //     overflows; by absorbing that space it keeps the self controls
-        //     row pinned to the bottom edge no matter how many people
-        //     joined. ---
+        //     grid fills all remaining column height and scrolls once it
+        //     overflows; the self controls stay out of it, docked to the
+        //     tab's bottom margin (see the row below). ---
         Flickable {
             id: participantGrid
 
             visible: discordTabRoot.inVoice
             clip: true
             boundsBehavior: Flickable.StopAtBounds
+            // 48px dock + 12px gap: extra scroll room so fully scrolled
+            // content stops above the self controls instead of sliding
+            // behind them; only added when the flow actually overflows.
             contentHeight: gridFlow.height
+                    + (gridFlow.height > participantGrid.height ? 60 : 0)
             Layout.fillWidth: true
             Layout.fillHeight: true
 
@@ -316,57 +319,55 @@ Rectangle {
             }
         }
 
-        // --- Self controls pinned to the bottom left: mute, deafen, camera,
-        //     leave. The participants grid above fills the leftover height,
-        //     so this row stays docked while the grid scrolls. ControlButton
-        //     has no intrinsic size, so each button carries the dashboard's
-        //     standard 48x48 preferred size (see QuickControls). Self
-        //     controls execute inside the plugin, so they only exist while
-        //     the plugin is connected - and they only make sense while in
-        //     voice. There is no blind-toggle mode without the transport. ---
-        RowLayout {
-            visible: discordTabRoot.showControls
-            spacing: 10
+    }
 
-            ControlButton {
-                Layout.preferredWidth: 48
-                Layout.preferredHeight: 48
-                isActive: !!(discordTabRoot.self && discordTabRoot.self.muted)
-                iconName: !!(discordTabRoot.self && discordTabRoot.self.muted) ? Icons.micSlash : Icons.mic
-                tooltipText: isActive ? "Unmute" : "Mute"
-                onClicked: DiscordVoice.toggleSelfMute()
-            }
+    // --- Self controls docked into the tab's bottom margin instead of the
+    //     content column: the grid gets the full column height, so two
+    //     participant rows fit above the buttons without cropping, and the
+    //     second row's volume strip clears the buttons' top edge. The dock
+    //     lifts over the debug view when that one is open. ---
+    RowLayout {
+        visible: discordTabRoot.showControls
+        anchors.left: parent.left
+        anchors.leftMargin: 16
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 4 + (debugBox.visible ? debugBox.height + 8 : 0)
+        spacing: 10
 
-            ControlButton {
-                Layout.preferredWidth: 48
-                Layout.preferredHeight: 48
-                isActive: !!(discordTabRoot.self && discordTabRoot.self.deafened)
-                iconName: !!(discordTabRoot.self && discordTabRoot.self.deafened) ? Icons.speakerX : Icons.headphones
-                tooltipText: isActive ? "Undeafen" : "Deafen"
-                onClicked: DiscordVoice.toggleSelfDeafen()
-            }
+        ControlButton {
+            Layout.preferredWidth: 48
+            Layout.preferredHeight: 48
+            isActive: !!(discordTabRoot.self && discordTabRoot.self.muted)
+            iconName: !!(discordTabRoot.self && discordTabRoot.self.muted) ? Icons.micSlash : Icons.mic
+            tooltipText: isActive ? "Unmute" : "Mute"
+            onClicked: DiscordVoice.toggleSelfMute()
+        }
 
-            ControlButton {
-                Layout.preferredWidth: 48
-                Layout.preferredHeight: 48
-                isActive: false
-                iconName: Icons.webcam
-                tooltipText: "Toggle camera"
-                onClicked: DiscordVoice.toggleCamera()
-            }
+        ControlButton {
+            Layout.preferredWidth: 48
+            Layout.preferredHeight: 48
+            isActive: !!(discordTabRoot.self && discordTabRoot.self.deafened)
+            iconName: !!(discordTabRoot.self && discordTabRoot.self.deafened) ? Icons.speakerX : Icons.headphones
+            tooltipText: isActive ? "Undeafen" : "Deafen"
+            onClicked: DiscordVoice.toggleSelfDeafen()
+        }
 
-            ControlButton {
-                Layout.preferredWidth: 48
-                Layout.preferredHeight: 48
-                isActive: false
-                iconName: Icons.logout
-                tooltipText: "Leave voice channel"
-                onClicked: DiscordVoice.leaveVoice()
-            }
+        ControlButton {
+            Layout.preferredWidth: 48
+            Layout.preferredHeight: 48
+            isActive: false
+            iconName: Icons.webcam
+            tooltipText: "Toggle camera"
+            onClicked: DiscordVoice.toggleCamera()
+        }
 
-            Item {
-                Layout.fillWidth: true
-            }
+        ControlButton {
+            Layout.preferredWidth: 48
+            Layout.preferredHeight: 48
+            isActive: false
+            iconName: Icons.logout
+            tooltipText: "Leave voice channel"
+            onClicked: DiscordVoice.leaveVoice()
         }
     }
 

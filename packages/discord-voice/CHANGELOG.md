@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4
+
+- The self controls dock into the tab's bottom margin instead of taking
+  layout space above it: the second participant row is no longer cropped,
+  and the grid scrolls to a stop above the dock when three or more rows
+  wrap.
+
 ## 0.1.3
 
 - The avatar photo fills its circle edge-to-edge like Discord's, instead
