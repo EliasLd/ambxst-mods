@@ -74,11 +74,10 @@ Tested against Ambxst 1.3.15 (commit
 5d71e924212ce2c0203e7448e0b1e3db52608640) and 1.4.1 (commit
 5db90ba000713b5cb991a2abce1b766ab47fbd2b); the patched sources are
 byte-identical between both. The patch removes the Effects entries from
-`SettingsTab.qml` and `SettingsIndex.qml`; see
-`patches/no-easyeffects.patch`. The Go-side spawn lives in the compiled
-`ambxst` binary and remains stock behavior — this package's cleanup service
-runs after each shell start to compensate.
-
-> Note: the startup cleanup described in the second bullet is being added
-> in the next commit of this branch. Until then the mod only removes the
-> UI integration, and the Go-spawned daemon still exists each session.
+`SettingsTab.qml` and `SettingsIndex.qml` and boots the cleanup service from
+`GlobalShortcuts.qml` (the same anchor a tab-adding mod already inserts its
+bindings at, so both compose together); see
+`patches/no-easyeffects.patch`. The QML cleanup service lives at
+`payload/modules/services/NoEasyEffects.qml`. The Go-side spawn lives in the
+compiled `ambxst` binary and remains stock behavior — this package's
+cleanup service runs after each shell start to compensate.

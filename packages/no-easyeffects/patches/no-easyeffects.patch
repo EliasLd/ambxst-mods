@@ -1,3 +1,19 @@
+diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShortcuts.qml
+index 894ec7b..f9b9cca 100644
+--- a/modules/services/GlobalShortcuts.qml
++++ b/modules/services/GlobalShortcuts.qml
+@@ -12,6 +12,11 @@ QtObject {
+     id: root
+ 
+     readonly property string appId: "ambxst"
++
++    // Boots the no-easyeffects cleanup service with the shell: its only job
++    // is killing the service daemon the Go backend drops right after start.
++    readonly property var noEasyEffectsService: NoEasyEffects
++
+     // Per-user runtime dir instead of /tmp: /tmp is world-shared and its
+     // sticky bit lets a second local account permanently squat the FIFO.
+     // The shell expression keeps this working even when XDG_RUNTIME_DIR
 diff --git a/modules/widgets/dashboard/controls/SettingsIndex.qml b/modules/widgets/dashboard/controls/SettingsIndex.qml
 index 3fac43f..e87bdf7 100644
 --- a/modules/widgets/dashboard/controls/SettingsIndex.qml

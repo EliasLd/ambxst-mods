@@ -25,6 +25,11 @@
   ],
   "operations": [
     {
+      "type": "overlay",
+      "source": "payload/modules/services/NoEasyEffects.qml",
+      "target": "modules/services/NoEasyEffects.qml"
+    },
+    {
       "type": "patch",
       "source": "patches/no-easyeffects.patch"
     }
