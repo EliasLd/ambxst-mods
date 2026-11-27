@@ -62,9 +62,11 @@ Rectangle {
 
     function syncVolume() {
         syncing = true;
-        // Track is 1:1 percent (0-100), like Vesktop's own popout slider;
-        // values Discord stored above 100 pin the fill at the end.
-        volumeSlider.value = Math.min(volumeValue / 100, 1);
+        // Discord's user-volume slider is not linear: percent as shown and
+        // percent as stored relate by exponent 2.8 (its web bundle converts
+        // with pow(stored/100, 1/2.8) for display and pow(position, 2.8) on
+        // writes). Track it here too, so the fill matches Vesktop's slider.
+        volumeSlider.value = Math.min(Math.pow(volumeValue / 100, 1 / 2.8), 1);
         syncing = false;
     }
 
@@ -244,7 +246,11 @@ Rectangle {
                     if (tile.syncing)
                         return;
                     if (tile.user)
-                        DiscordVoice.setUserVolume(tile.userId, Math.round(value * 100));
+                        // Inverse of the display curve (see syncVolume): the
+                        // wire carries Discord's stored percent, not the
+                        // slider position.
+                        DiscordVoice.setUserVolume(
+                            tile.userId, Math.round(Math.pow(value, 2.8) * 100));
                 }
 
                 Behavior on opacity {
