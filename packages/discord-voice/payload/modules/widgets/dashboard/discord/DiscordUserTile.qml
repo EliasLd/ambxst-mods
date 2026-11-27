@@ -19,9 +19,24 @@ Rectangle {
     // the tile owns the fixed height.
     implicitHeight: 104
 
-    property var user: null
+    property string userId: ""
 
-    readonly property string userId: user ? String(user.id) : ""
+    // Lookup instead of model object: the tab rebuilds its tile list only
+    // when members change, and each state push flows into the tiles through
+    // this re-evaluated binding rather than through delegate destruction
+    // (a rebuild mid-press is what used to cut volume drags short, because
+    // every drag command itself triggers a state push).
+    readonly property var user: {
+        const us = DiscordVoice.users;
+        for (let i = 0; i < us.length; i++)
+            if (String(us[i].id) === tile.userId)
+                return us[i];
+        // Self is not part of `users`; it ships in the same wire shape.
+        const self = DiscordVoice.self;
+        if (self && String(self.id) === tile.userId)
+            return self;
+        return null;
+    }
     readonly property string userName: user ? (user.name || "?") : "?"
     readonly property bool muted: user ? user.muted === true : false
     readonly property bool deafened: user ? user.deafened === true : false
@@ -29,7 +44,9 @@ Rectangle {
     readonly property bool localMute: user ? user.localMute === true : false
     // Self has no local audio context (you do not "hear" yourself through a
     // local volume), so the bar only exists for other participants.
-    readonly property bool isSelf: user ? user.self === true : false
+    readonly property bool isSelf: user
+        ? String(user.id) === String(DiscordVoice.self?.id ?? "")
+        : false
     // The plugin reports volume as null when the internal volume module is
     // unavailable; the bar hides instead of pretending.
     readonly property bool hasVolume: user ? typeof user.volume === "number" : false
@@ -180,19 +197,46 @@ Rectangle {
             height: 26
             spacing: 4
 
+            Text {
+                id: volumeIcon
+
+                // Display-only status glyph, drawn by the tile: inside
+                // StyledSlider the icon area would reject press events and
+                // hand drags to the grid's Flickable as a scroll.
+                text: tile.localMute ? Icons.speakerSlash : Icons.speakerHigh
+                font.family: Icons.font
+                font.pixelSize: 18
+                color: Colors.overBackground
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: tile.localMute ? 0.4 : 1
+
+                Behavior on opacity {
+                    enabled: Config.animDuration > 0
+                    NumberAnimation {
+                        duration: Config.animDuration / 2
+                    }
+                }
+            }
+
             StyledSlider {
                 id: volumeSlider
 
-                width: parent.width - muteButton.width - parent.spacing
+                // No icon here on purpose, see volumeIcon above; the whole
+                // track stays grabbable.
+                width: parent.width - volumeIcon.width - muteButton.width - 2 * parent.spacing
                 height: parent.height
                 resizeParent: false
                 tooltipText: Math.round(value * 100) + "%"
-                icon: tile.localMute ? Icons.speakerSlash : Icons.speakerHigh
-                iconClickable: false
+                icon: ""
                 // The wheel belongs to the participant grid; volume is
                 // drag-first.
                 scroll: false
                 smoothDrag: true
+                // Same wavy fill as the bar's volume / mic sliders, scaled
+                // by the volume: quiet users show a flat line.
+                wavy: true
+                wavyAmplitude: tile.localMute ? 0.5 : 1.5 * value
+                wavyFrequency: tile.localMute ? 1.0 : 8.0 * value
                 enabled: !tile.localMute
                 opacity: tile.localMute ? 0.4 : 1
 

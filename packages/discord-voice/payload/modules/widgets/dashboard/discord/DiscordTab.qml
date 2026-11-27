@@ -28,14 +28,45 @@ Rectangle {
     readonly property bool inVoice: DiscordVoice.inVoice
     readonly property bool pluginActive: DiscordVoice.pluginActive
 
-    // The rows the tab repeats: self first (same shape as everyone else's
-    // entry, plus a self marker the row uses to hide its volume bar), then
-    // the other participants.
-    readonly property var participants: {
-        var list = discordTabRoot.users ?? [];
+    // The rows the tab repeats: self first (same id-based shape as everyone
+    // else's entry; the tile hides the volume bar for itself), then the
+    // other participants. Held as a stable list of user ids that is only
+    // rebuilt when the member set or order changes: a Repeater destroys and
+    // recreates its delegates on every model reassignment, and a rebuild
+    // mid-press is what used to cut volume drags short (each drag command
+    // itself triggers a state push through the plugin). All display data
+    // reaches the tiles through their reactive user lookup instead.
+    property var participants: []
+
+    function syncParticipants() {
+        const seq = [];
         if (discordTabRoot.self && discordTabRoot.self.id)
-            list = [Object.assign({}, discordTabRoot.self, { self: true })].concat(list);
-        return list;
+            seq.push(String(discordTabRoot.self.id));
+        const users = discordTabRoot.users ?? [];
+        for (let i = 0; i < users.length; i++)
+            seq.push(String(users[i].id));
+        const cur = discordTabRoot.participants;
+        let same = cur.length === seq.length;
+        if (same) {
+            for (let i = 0; i < seq.length; i++) {
+                if (cur[i] !== seq[i]) {
+                    same = false;
+                    break;
+                }
+            }
+        }
+        if (!same)
+            discordTabRoot.participants = seq;
+    }
+
+    Component.onCompleted: syncParticipants()
+
+    Connections {
+        target: DiscordVoice
+
+        function onStateChanged() {
+            discordTabRoot.syncParticipants();
+        }
     }
 
     // Fixed four-tile geometry: the grid always uses the full-channel
@@ -245,7 +276,7 @@ Rectangle {
                     DiscordUserTile {
                         required property var modelData
 
-                        user: modelData
+                        userId: String(modelData)
                         width: discordTabRoot.tileWidth
                         height: implicitHeight
                     }

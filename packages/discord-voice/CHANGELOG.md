@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.6
+
+- Per-user volume drags no longer cut short after ~10ms: state pushes from
+  the companion plugin rebuilt every tile through the participant Repeater;
+  the tab now holds a stable id list and tiles read their data reactively.
+- Same fix keeps volume reads steady while sliders are moved on Vesktop's
+  own side.
+
+## 0.1.5
+
+- The per-user volume bar gets the bar sliders' animated wavy fill, scaled
+  by the volume.
+- The volume icon is drawn by the tile instead of living inside the
+  slider, so the whole track is grabbable: drags starting near the icon no
+  longer scroll the participant grid.
+
 ## 0.1.4
 
 - The self controls dock into the tab's bottom margin instead of taking
