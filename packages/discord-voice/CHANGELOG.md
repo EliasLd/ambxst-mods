@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+
+- The per-user volume slider renders on Discord's own curve (slider percent
+  is the stored percent to the power 1/2.8): fill and tooltip now match what
+  Vesktop's user-volume slider shows, and drags here land on the same number
+  in Vesktop.
+
 ## 0.1.6
 
 - Per-user volume drags no longer cut short after ~10ms: state pushes from
