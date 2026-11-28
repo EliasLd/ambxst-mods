@@ -27,7 +27,7 @@ import gitHash from "~git-hash";
 
 import type * as NativeModule from "./native";
 
-const PLUGIN_VERSION = "0.1.1";
+const PLUGIN_VERSION = "0.1.2";
 
 // How long speaking transitions are debounced before being sent. Discord can
 // emit rapid toggles; coalescing keeps the protocol sparse.
@@ -207,9 +207,10 @@ function diffSpeaking() {
 
 function serializeSelf(): WireSelf {
     const me = UserStore.getCurrentUser();
-    // Outside a voice channel the voice state is absent; the self flags only
-    // matter while in voice (the tab hides the controls otherwise), so the
-    // absence simply renders as "everything off".
+    // In voice the voice state carries the flags; while idle only the media
+    // engine has them (they persist across calls), so its getters are ORed
+    // in. The engine's own getters already fold deaf into muted, like the
+    // voice UI does.
     const state = me ? VoiceStateStore.getVoiceStateForUser(me.id) : undefined;
     return {
         id: me?.id ?? "",
@@ -218,8 +219,10 @@ function serializeSelf(): WireSelf {
         // render self as a participant row in the identical style; volume
         // and localMute stay absent since they do not apply to self.
         avatarUrl: me ? IconUtils.getUserAvatarURL(me, true, 80) : null,
-        muted: (state?.mute ?? false) || (state?.selfMute ?? false),
-        deafened: (state?.deaf ?? false) || (state?.selfDeaf ?? false),
+        muted: (state?.mute ?? false) || (state?.selfMute ?? false)
+            || (MediaEngineStore?.isSelfMute?.() ?? false),
+        deafened: (state?.deaf ?? false) || (state?.selfDeaf ?? false)
+            || (MediaEngineStore?.isSelfDeaf?.() ?? false),
         suppressed: state?.suppress ?? false
     };
 }
