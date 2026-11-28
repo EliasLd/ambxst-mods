@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "eliasld.discord-voice",
   "name": "Discord voice",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Adds a Discord voice tab to the dashboard: see who is in your Vesktop voice channel, control their local volume, and control your mic, deafen, camera and voice connection.",
   "license": "MIT",
   "author": "EliasLd",
@@ -33,6 +33,11 @@
       "type": "overlay",
       "source": "payload/modules/services/DiscordVoice.qml",
       "target": "modules/services/DiscordVoice.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/MicCapture.qml",
+      "target": "modules/services/MicCapture.qml"
     },
     {
       "type": "overlay",
