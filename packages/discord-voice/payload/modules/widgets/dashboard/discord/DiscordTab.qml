@@ -79,8 +79,10 @@ Rectangle {
             : 0
 
     // Self controls execute inside the plugin, so they only exist while the
-    // plugin is connected - and they only make sense while in voice. There
-    // is no blind-toggle mode without the transport.
+    // plugin is connected; there is no blind-toggle mode without the
+    // transport. showControls gates the in-voice-only pair (camera, leave);
+    // mic and deafen show whenever the companion is up, because the engine's
+    // persistent flags keep them truthful while idle too.
     readonly property bool showControls: inVoice
 
     // Inline chip: lit or dark connection indicator in the header.
@@ -356,9 +358,11 @@ Rectangle {
     //     content column: the grid gets the full column height, so two
     //     participant rows fit above the buttons without cropping, and the
     //     second row's volume strip clears the buttons' top edge. The dock
-    //     lifts over the debug view when that one is open. ---
+    //     lifts over the debug view when that one is open. Mic and deafen
+    //     show while idle (visible with the row, gated on the companion);
+    //     camera and leave stay in-voice-only. ---
     RowLayout {
-        visible: discordTabRoot.showControls
+        visible: discordTabRoot.pluginActive
         anchors.left: parent.left
         anchors.leftMargin: 16
         anchors.bottom: parent.bottom
@@ -384,6 +388,7 @@ Rectangle {
         }
 
         ControlButton {
+            visible: discordTabRoot.showControls
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
             isActive: false
@@ -393,6 +398,7 @@ Rectangle {
         }
 
         ControlButton {
+            visible: discordTabRoot.showControls
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
             isActive: false
