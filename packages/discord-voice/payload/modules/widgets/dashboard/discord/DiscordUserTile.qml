@@ -57,8 +57,39 @@ Rectangle {
     // (MicSlider's external-change pattern).
     property bool syncing: false
 
-    onUserChanged: syncVolume()
-    Component.onCompleted: syncVolume()
+    onUserChanged: {
+        syncVolume();
+        syncMicVolume();
+    }
+    Component.onCompleted: {
+        syncVolume();
+        syncMicVolume();
+    }
+
+    // The self bar mirrors the OS-side capture gain, which moves outside
+    // the tab too (system mixer, device switch): re-sync whenever MicCapture
+    // reports anything.
+    Connections {
+        target: tile.isSelf ? MicCapture : null
+        ignoreUnknownSignals: true
+        function onVolumeChanged() {
+            tile.syncMicVolume();
+        }
+        function onMutedChanged() {
+            tile.syncMicVolume();
+        }
+        function onReadyChanged() {
+            tile.syncMicVolume();
+        }
+    }
+
+    function syncMicVolume() {
+        if (!tile.isSelf)
+            return;
+        syncing = true;
+        micSlider.value = MicCapture.volume;
+        syncing = false;
+    }
 
     function syncVolume() {
         syncing = true;
@@ -191,8 +222,7 @@ Rectangle {
             }
         }
 
-        // --- Per-user local volume and mute (never for self: the bar would
-        //     imply a local audio path that does not exist) ---
+        // --- Per-user local volume and mute (self gets the mic bar below) ---
         Row {
             visible: tile.hasVolume && !tile.isSelf
             width: parent.width
@@ -276,6 +306,69 @@ Rectangle {
                 iconName: tile.localMute ? Icons.micSlash : Icons.mic
                 tooltipText: isActive ? "Unmute locally" : "Mute locally"
                 onClicked: DiscordVoice.setUserLocalMute(tile.userId, !tile.localMute)
+            }
+        }
+
+        // --- Self: mic capture volume with a mic glyph. Discord has no
+        //     local volume for yourself; this bar instead drives Vesktop's
+        //     own capture stream (see MicCapture), so it changes exactly
+        //     what the call hears. Linear percent, dimmed like the local
+        //     mute while self-muted; no second mute button, the dock has
+        //     one.
+        Row {
+            visible: tile.isSelf && MicCapture.ready
+            width: parent.width
+            height: 26
+            spacing: 4
+
+            Text {
+                id: micIcon
+
+                // Display-only status glyph, drawn by the tile (see
+                // volumeIcon above for why it is not inside the slider).
+                text: tile.muted ? Icons.micSlash : Icons.mic
+                font.family: Icons.font
+                font.pixelSize: 18
+                color: Colors.overBackground
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: tile.muted ? 0.4 : 1
+
+                Behavior on opacity {
+                    enabled: Config.animDuration > 0
+                    NumberAnimation {
+                        duration: Config.animDuration / 2
+                    }
+                }
+            }
+
+            StyledSlider {
+                id: micSlider
+
+                width: parent.width - micIcon.width - parent.spacing
+                height: parent.height
+                resizeParent: false
+                tooltipText: Math.round(value * 100) + "%"
+                icon: ""
+                scroll: false
+                smoothDrag: true
+                wavy: true
+                wavyAmplitude: tile.muted ? 0.5 : 1.5 * value
+                wavyFrequency: tile.muted ? 1.0 : 8.0 * value
+                enabled: !tile.muted
+                opacity: tile.muted ? 0.4 : 1
+
+                onValueChanged: {
+                    if (tile.syncing)
+                        return;
+                    MicCapture.setVolume(value);
+                }
+
+                Behavior on opacity {
+                    enabled: Config.animDuration > 0
+                    NumberAnimation {
+                        duration: Config.animDuration / 2
+                    }
+                }
             }
         }
     }

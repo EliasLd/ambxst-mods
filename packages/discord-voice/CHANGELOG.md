@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.8
+
+- The self tile gets a mic volume bar in the same style as the other
+  participants, with a microphone glyph: it drives Vesktop's own mic
+  capture stream, so it changes exactly what the call hears without touching
+  other apps or the device volume.
+
 ## 0.1.7
 
 - The per-user volume slider renders on Discord's own curve (slider percent
