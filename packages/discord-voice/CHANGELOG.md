@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- The mic and deafen buttons show while Vesktop is open but idle, docked
+  like in-call, so the dashboard reflects the mute state before joining;
+  camera and leave stay in-voice-only.
+- The companion plugin reads the media engine's persistent flags, which keep
+  the idle cue truthful (plugin 0.1.2, rebuild and reinstall needed).
+
 ## 0.1.8
 
 - The self tile gets a mic volume bar in the same style as the other
